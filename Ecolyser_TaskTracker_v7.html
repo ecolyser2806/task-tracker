@@ -1,0 +1,2445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ecolyser — Daily Task Tracker v7</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --g900:#064E3B;--g700:#065F46;--g600:#047857;--g500:#059669;--g400:#10B981;--g200:#A7F3D0;--g100:#D1FAE5;--g50:#ECFDF5;
+  --dark:#0F172A;--dark2:#1E293B;--dark3:#334155;--mid:#64748B;--light:#94A3B8;--border:#E2E8F0;--bg:#F8FAFC;--white:#FFFFFF;
+  --red:#DC2626;--red-bg:#FEF2F2;--amber:#D97706;--amber-bg:#FFFBEB;--blue:#2563EB;--blue-bg:#EFF6FF;--purple:#7C3AED;--purple-bg:#F5F3FF;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.05);--shadow-md:0 4px 12px rgba(0,0,0,.1);
+  --r:10px;--r-sm:6px;--r-lg:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--dark);min-height:100vh;font-size:14px}
+.shell{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:224px;background:var(--g900);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.topbar{background:var(--white);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:sticky;top:0;z-index:10}
+.content{padding:24px;flex:1}
+.brand{padding:20px 16px 14px;border-bottom:1px solid rgba(255,255,255,.1)}
+.brand-name{font-size:15px;font-weight:600;color:#fff;letter-spacing:.3px}
+.brand-sub{font-size:10px;color:var(--g200);margin-top:2px;letter-spacing:.5px;text-transform:uppercase}
+.nav-section{padding:10px 8px 4px;font-size:9px;color:var(--g200);letter-spacing:1px;text-transform:uppercase;padding-left:16px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 16px;color:rgba(255,255,255,.7);cursor:pointer;border-radius:var(--r-sm);margin:1px 6px;transition:all .15s;font-size:13px}
+.nav-item:hover{background:rgba(255,255,255,.1);color:#fff}
+.nav-item.active{background:var(--g600);color:#fff;font-weight:500}
+.nav-item .ico{width:16px;text-align:center;font-size:14px}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:600;padding:1px 6px;border-radius:99px}
+.sidebar-footer{margin-top:auto;padding:12px 16px;border-top:1px solid rgba(255,255,255,.1);font-size:10px;color:var(--g200)}
+.user-pill{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,255,255,.08);border-radius:var(--r-sm);margin-bottom:8px}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--g500);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;flex-shrink:0}
+.user-name{font-size:12px;color:#fff;font-weight:500}
+.user-role{font-size:9px;color:var(--g200)}
+.logout-btn{display:flex;align-items:center;gap:6px;padding:6px 10px;background:rgba(220,38,38,.15);border:1px solid rgba(220,38,38,.3);border-radius:var(--r-sm);color:#FCA5A5;font-size:11px;cursor:pointer;transition:all .15s;width:100%;justify-content:center}
+.logout-btn:hover{background:rgba(220,38,38,.25);color:#fff}
+.panel{display:none}.panel.active{display:block}
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px;margin-bottom:16px;box-shadow:var(--shadow)}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.card-title{font-size:14px;font-weight:600;color:var(--dark)}
+.card-sub{font-size:12px;color:var(--mid);margin-top:2px}
+.metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px}
+.metric{background:var(--white);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow)}
+.metric-val{font-size:26px;font-weight:600;line-height:1}
+.metric-lbl{font-size:11px;color:var(--mid);margin-top:4px;font-weight:500;letter-spacing:.3px}
+.metric.green .metric-val{color:var(--g500)}.metric.red .metric-val{color:var(--red)}.metric.amber .metric-val{color:var(--amber)}.metric.blue .metric-val{color:var(--blue)}.metric.purple .metric-val{color:var(--purple)}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:14px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:11px;font-weight:600;color:var(--mid);letter-spacing:.3px;text-transform:uppercase}
+select,input[type=text],input[type=number],input[type=date],input[type=datetime-local],input[type=password],input[type=file],textarea{
+  font-family:'DM Sans',sans-serif;font-size:13px;border:1.5px solid var(--border);border-radius:var(--r-sm);
+  padding:8px 10px;background:var(--white);color:var(--dark);outline:none;transition:border .15s;width:100%}
+select:focus,input:focus,textarea:focus{border-color:var(--g400)}
+textarea{resize:vertical;min-height:70px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .15s}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--g600);color:#fff}.btn-primary:hover{background:var(--g700)}
+.btn-ghost{background:transparent;border:1.5px solid var(--border);color:var(--dark)}.btn-ghost:hover{background:var(--bg)}
+.btn-danger{background:var(--red);color:#fff}.btn-danger:hover{background:#B91C1C}
+.btn-blue{background:var(--blue);color:#fff}.btn-blue:hover{background:#1D4ED8}
+.btn-amber{background:var(--amber);color:#fff}.btn-amber:hover{background:#B45309}
+.btn-purple{background:var(--purple);color:#fff}.btn-purple:hover{background:#6D28D9}
+.btn-sm{padding:5px 11px;font-size:11px}
+.btn-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.table-wrap{overflow-x:auto}
+table.tracker{width:100%;border-collapse:collapse;font-size:12px}
+.tracker th{background:var(--bg);color:var(--mid);font-weight:600;font-size:10px;letter-spacing:.5px;text-transform:uppercase;padding:9px 10px;text-align:left;border-bottom:1.5px solid var(--border);white-space:nowrap}
+.tracker td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.tracker tr:hover td{background:#F0FDF4}
+.tracker tr.aging-crit td{background:#FEF2F2}
+.tracker tr.aging-warn td{background:#FFFBEB}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px;letter-spacing:.3px;white-space:nowrap}
+.badge-green{background:var(--g100);color:var(--g700)}.badge-red{background:#FEE2E2;color:var(--red)}.badge-amber{background:#FEF3C7;color:var(--amber)}.badge-blue{background:#DBEAFE;color:var(--blue)}.badge-gray{background:#F1F5F9;color:var(--mid)}.badge-purple{background:#EDE9FE;color:var(--purple)}
+.badge-p1{background:#FEE2E2;color:var(--red)}.badge-p2{background:#FEF3C7;color:var(--amber)}.badge-p3{background:var(--g100);color:var(--g700)}
+.alert{border-radius:var(--r-sm);padding:10px 14px;font-size:12px;margin-bottom:14px;display:flex;align-items:flex-start;gap:8px}
+.alert-info{background:var(--blue-bg);color:var(--blue);border-left:3px solid var(--blue)}
+.alert-success{background:var(--g50);color:var(--g700);border-left:3px solid var(--g400)}
+.alert-warn{background:var(--amber-bg);color:var(--amber);border-left:3px solid var(--amber)}
+.alert-error{background:var(--red-bg);color:var(--red);border-left:3px solid var(--red)}
+.filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.filter-bar select,.filter-bar input{width:auto;min-width:120px;font-size:12px;padding:6px 9px}
+.ts{font-size:10px;color:var(--light);font-family:'DM Mono',monospace}
+.aging-val{font-family:'DM Mono',monospace;font-size:11px;font-weight:500}
+.aging-crit-txt{color:var(--red)}.aging-warn-txt{color:var(--amber)}.aging-ok-txt{color:var(--g500)}
+.login-overlay{position:fixed;inset:0;background:linear-gradient(135deg,#0F2027,#064E3B,#0F172A);display:flex;align-items:center;justify-content:center;z-index:1000}
+.login-card{background:var(--white);border-radius:20px;padding:40px;width:400px;box-shadow:0 30px 80px rgba(0,0,0,.4)}
+.login-logo{font-size:36px;margin-bottom:6px}
+.login-title{font-size:22px;font-weight:700;color:var(--dark);margin-bottom:4px}
+.login-sub{font-size:13px;color:var(--mid);margin-bottom:28px}
+.login-error{background:var(--red-bg);color:var(--red);border-radius:var(--r-sm);padding:8px 12px;font-size:12px;margin-bottom:12px;display:none;border-left:3px solid var(--red)}
+.lock-overlay{position:fixed;inset:0;background:rgba(9,30,62,.88);display:flex;align-items:center;justify-content:center;z-index:999;backdrop-filter:blur(6px)}
+.lock-card{background:var(--white);border-radius:var(--r-lg);padding:36px;width:360px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.lock-error{font-size:12px;color:var(--red);margin-top:10px;display:none}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:var(--white);border-radius:var(--r-lg);width:min(640px,100%);max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-head{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--white);z-index:5}
+.modal-head h2{font-size:15px;font-weight:600}
+.modal-body{padding:20px}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--mid);line-height:1}
+.tb-title{font-size:15px;font-weight:600;color:var(--dark)}
+.tb-right{display:flex;gap:8px;align-items:center}
+.tb-date{font-size:11px;color:var(--mid);font-family:'DM Mono',monospace}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--g400);animation:pulse 2s infinite}
+.sync-dot.error{background:var(--red)}.sync-dot.syncing{background:var(--amber)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.page-title{font-size:20px;font-weight:700;color:var(--dark);margin-bottom:4px}
+.page-sub{font-size:13px;color:var(--mid);margin-bottom:20px}
+.empty{text-align:center;padding:32px;color:var(--light);font-size:13px}
+.notif-bell{position:relative;cursor:pointer;padding:4px 8px;border-radius:var(--r-sm);background:var(--bg);border:1.5px solid var(--border);font-size:16px;display:flex;align-items:center}
+.notif-count{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:9px;font-weight:700;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.notif-panel{position:absolute;top:44px;right:0;width:340px;background:var(--white);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--shadow-md);z-index:100;max-height:400px;overflow-y:auto}
+.notif-item{padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px;cursor:pointer}
+.notif-item:hover{background:var(--g50)}
+.notif-item.unread{border-left:3px solid var(--g400)}
+.notif-header{padding:10px 14px;font-size:11px;font-weight:600;color:var(--mid);text-transform:uppercase;border-bottom:1.5px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.tab-bar{display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--border)}
+.tab-btn{padding:8px 16px;font-size:13px;font-weight:500;color:var(--mid);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab-btn.active{color:var(--g600);border-bottom-color:var(--g600);font-weight:600}
+.tab-content{display:none}.tab-content.active{display:block}
+.excel-upload-zone{border:2px dashed var(--border);border-radius:var(--r-lg);padding:24px;text-align:center;cursor:pointer;transition:all .15s;margin-bottom:12px}
+.excel-upload-zone:hover{border-color:var(--g400);background:var(--g50)}
+.task-type-toggle{display:flex;gap:8px;margin-bottom:12px}
+.toggle-btn{padding:6px 14px;border-radius:99px;font-size:12px;font-weight:500;cursor:pointer;border:1.5px solid var(--border);background:var(--white);color:var(--mid);transition:all .15s}
+.toggle-btn.active{background:var(--g600);color:#fff;border-color:var(--g600)}
+.gs-banner{background:linear-gradient(135deg,var(--g900),var(--g600));border-radius:var(--r-lg);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+.hod-section{border-left:3px solid var(--g400);padding-left:14px;margin-bottom:16px}
+.hod-section h3{font-size:13px;font-weight:600;color:var(--g700);margin-bottom:8px}
+.audit-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:12px}
+.audit-chk{width:17px;height:17px;accent-color:var(--g500);cursor:pointer;flex-shrink:0}
+.audit-status{margin-left:auto;flex-shrink:0}
+.prod-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px}
+.prod-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow);display:flex;align-items:center;gap:14px}
+.prod-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0}
+.prod-name{font-size:13px;font-weight:600;color:var(--dark)}
+.prod-score{font-size:11px;color:var(--mid);margin-top:2px}
+.prod-bar-wrap{height:5px;background:var(--border);border-radius:99px;margin-top:6px;overflow:hidden}
+.prod-bar{height:100%;background:var(--g400);border-radius:99px;transition:width .5s ease}
+.online-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:4px}
+.dot-green{background:var(--g400)}.dot-red{background:var(--red)}.dot-amber{background:var(--amber)}.dot-gray{background:var(--light)}
+.notif-toast{position:fixed;bottom:24px;right:24px;background:var(--dark2);color:#fff;border-radius:var(--r-lg);padding:14px 18px;font-size:13px;box-shadow:0 8px 32px rgba(0,0,0,.3);z-index:9000;display:flex;align-items:flex-start;gap:10px;max-width:340px;transform:translateY(80px);opacity:0;transition:all .35s cubic-bezier(.34,1.56,.64,1)}
+.notif-toast.show{transform:translateY(0);opacity:1}
+.notif-toast-icon{font-size:18px;flex-shrink:0;margin-top:1px}
+.notif-toast-title{font-weight:600;font-size:12px;color:var(--g200);margin-bottom:2px}
+.notif-toast-msg{font-size:12px;color:rgba(255,255,255,.8);line-height:1.4}
+.notif-toast-close{margin-left:auto;flex-shrink:0;cursor:pointer;color:rgba(255,255,255,.5);font-size:16px;line-height:1;align-self:flex-start}
+.current-user-tag{display:inline-flex;align-items:center;gap:6px;background:var(--g50);border:1.5px solid var(--g200);border-radius:var(--r-sm);padding:6px 12px;font-size:13px;font-weight:600;color:var(--g700)}
+.pwd-table{width:100%;font-size:12px;border-collapse:collapse}
+.pwd-table th{background:var(--bg);color:var(--mid);font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;padding:8px 10px;border-bottom:1.5px solid var(--border)}
+.pwd-table td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.sync-bar{background:rgba(255,255,255,.07);border-radius:var(--r-sm);padding:6px 10px;margin:6px 0;font-size:10px;color:var(--g200)}
+.sync-progress{height:3px;background:rgba(255,255,255,.1);border-radius:99px;margin-top:4px;overflow:hidden}
+.sync-progress-fill{height:100%;background:var(--g400);border-radius:99px;transition:width .4s ease;width:0%}
+.code-block{background:#1E293B;border-radius:8px;padding:14px;font-size:10px;color:#A7F3D0;font-family:'DM Mono',monospace;line-height:1.9;overflow-x:auto;margin-top:8px;white-space:pre-wrap}
+.ac-wrap{position:relative;width:100%}
+.ac-input{width:100%}
+.ac-drop{position:absolute;top:calc(100% + 3px);left:0;right:0;background:var(--white);border:1.5px solid var(--g400);border-radius:var(--r-sm);box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:500;max-height:220px;overflow-y:auto;display:none}
+.ac-drop.open{display:block}
+.ac-item{padding:8px 12px;font-size:12px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s}
+.ac-item:last-child{border:none}
+.ac-item:hover,.ac-item.focused{background:var(--g50);color:var(--g700)}
+.ac-item mark{background:none;color:var(--g600);font-weight:700}
+.ac-hint{padding:10px 12px;font-size:11px;color:var(--light);font-style:italic}
+.ac-clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:14px;color:var(--light);display:none;line-height:1;padding:0 2px}
+.ac-wrap:focus-within .ac-clear{display:block}
+.live-badge{display:inline-flex;align-items:center;gap:5px;background:#ECFDF5;border:1.5px solid var(--g400);color:var(--g700);font-size:10px;font-weight:700;padding:3px 10px;border-radius:99px;letter-spacing:.5px;text-transform:uppercase}
+.live-pulse{width:7px;height:7px;border-radius:50%;background:var(--g400);animation:pulse 1.4s infinite}
+.activity-item{padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px;display:flex;gap:10px;align-items:flex-start}
+.activity-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-card">
+    <div class="login-logo">🌿</div>
+    <div class="login-title">Ecolyser</div>
+    <div class="login-sub">Task Tracker v7 — Sign in to continue</div>
+    <div class="login-error" id="loginError"></div>
+    <div class="field" style="margin-bottom:12px">
+      <label>Your Name</label>
+      <select id="loginName"><option value="">-- Select Your Name --</option></select>
+    </div>
+    <div class="field" style="margin-bottom:16px">
+      <label>Password</label>
+      <input type="password" id="loginPwd" placeholder="Enter your password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px" onclick="doLogin()">Sign In →</button>
+    <div style="font-size:11px;color:var(--light);margin-top:14px;text-align:center">Ecolyser Environmental Solutions</div>
+  </div>
+</div>
+
+<!-- HOD LOCK -->
+<div class="lock-overlay" id="hodLock" style="display:none">
+  <div class="lock-card">
+    <div style="font-size:40px;margin-bottom:12px">🔐</div>
+    <div style="font-size:18px;font-weight:600;color:var(--dark);margin-bottom:4px">HOD Restricted Area</div>
+    <div style="font-size:13px;color:var(--mid);margin-bottom:20px">This panel is restricted to Head of Department only.</div>
+    <div class="field"><input type="password" id="hodPwdInput" placeholder="Enter HOD password" onkeydown="if(event.key==='Enter')verifyHOD()"></div>
+    <div class="lock-error" id="hodPwdError">Incorrect password. Please try again.</div>
+    <div style="display:flex;gap:8px;margin-top:14px;justify-content:center">
+      <button class="btn btn-primary" onclick="verifyHOD()">Unlock</button>
+      <button class="btn btn-ghost" onclick="cancelHOD()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="notif-toast" id="notifToast">
+  <div class="notif-toast-icon" id="toastIcon">🔔</div>
+  <div>
+    <div class="notif-toast-title" id="toastTitle"></div>
+    <div class="notif-toast-msg" id="toastMsg"></div>
+  </div>
+  <div class="notif-toast-close" onclick="hideToast()">✕</div>
+</div>
+
+<!-- Google Sheets Modal -->
+<div class="modal-overlay" id="gsModal" style="display:none">
+  <div class="modal">
+    <div class="modal-head"><h2>☁ Google Sheets Integration</h2><button class="modal-close" onclick="closeModal('gsModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="alert alert-success">✅ <b>All activities sync automatically.</b> Tasks · Work Logs · Sites · PCB · Reassignments · Activities · HOD Sign-off</div>
+      <div class="alert alert-info">📋 <b>HOD can delete rows directly from the Sheet</b> using the Delete buttons in the HOD Audit panel.</div>
+      <div class="form-grid" style="grid-template-columns:1fr">
+        <div class="field"><label>Apps Script Web App URL</label><input type="text" id="gsUrl" placeholder="https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"></div>
+        <div class="field"><label>Sheet Identifier</label><input type="text" id="gsSheet" value="EcolyserData"></div>
+      </div>
+      <div style="background:var(--bg);border-radius:var(--r-lg);padding:16px;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:700;color:var(--dark);margin-bottom:10px">📋 Setup Steps</div>
+        <div style="font-size:12px;color:var(--mid);line-height:2.1">
+          1. Open your Google Sheet → <b>Extensions</b> → <b>Apps Script</b><br>
+          2. Delete default code. Paste the script below.<br>
+          3. Click <b>Deploy</b> → <b>New Deployment</b> → Type: <b>Web App</b><br>
+          4. Set <b>"Who has access"</b> → <b>"Anyone"</b><br>
+          5. Deploy → copy the URL → paste above → <b>Save &amp; Connect</b><br>
+          6. Click <b>Sync All Data Now</b>.
+        </div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:var(--mid);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Complete Apps Script — supports delete by ID</div>
+      <div class="code-block">function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    if (data.action === 'batchAppend') {
+      data.batches.forEach(function(item) {
+        var sh = getOrCreateSheet(ss, item.sheet);
+        sh.appendRow(item.row);
+      });
+    }
+    if (data.action === 'append') {
+      var sh = getOrCreateSheet(ss, data.sheet);
+      sh.appendRow(data.row);
+    }
+    if (data.action === 'replace') {
+      var sh = getOrCreateSheet(ss, data.sheet);
+      sh.clearContents();
+      if (data.rows && data.rows.length > 0) {
+        sh.getRange(1,1,data.rows.length,data.rows[0].length).setValues(data.rows);
+      }
+    }
+    if (data.action === 'deleteRow') {
+      var sh = getOrCreateSheet(ss, data.sheet);
+      var vals = sh.getDataRange().getValues();
+      for (var i = 1; i < vals.length; i++) {
+        if (String(vals[i][0]) === String(data.id)) {
+          sh.deleteRow(i + 1);
+          break;
+        }
+      }
+    }
+    return ContentService.createTextOutput(
+      JSON.stringify({status:'OK'})
+    ).setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(
+      JSON.stringify({status:'ERROR',msg:err.message})
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+function getOrCreateSheet(ss, name) {
+  return ss.getSheetByName(name) || ss.insertSheet(name);
+}
+function doGet(e) {
+  return ContentService.createTextOutput('Ecolyser API Active ✓');
+}</div>
+      <div class="btn-row" style="margin-top:14px">
+        <button class="btn btn-primary" onclick="saveGSConfig()">💾 Save &amp; Connect</button>
+        <button class="btn btn-ghost" onclick="testGS()">🔌 Test Connection</button>
+        <button class="btn btn-blue" onclick="syncAllToGS()">☁ Sync All Data Now</button>
+      </div>
+      <div id="gsTestResult" style="font-size:12px;margin-top:8px"></div>
+      <div id="gsSyncResult" style="font-size:12px;margin-top:4px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Task Modal -->
+<div class="modal-overlay" id="taskModal" style="display:none">
+  <div class="modal">
+    <div class="modal-head"><h2 id="taskModalTitle">Assign / Add Task</h2><button class="modal-close" onclick="closeModal('taskModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="task-type-toggle">
+        <button class="toggle-btn active" id="ttSite" onclick="setTaskType('site')">📍 Site Task</button>
+        <button class="toggle-btn" id="ttOwn" onclick="setTaskType('own')">👤 My Own Task</button>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label>Assigned By</label>
+          <div id="t_assignedByDisplay" style="padding:8px 10px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:13px;color:var(--dark);font-weight:500">—</div>
+        </div>
+        <div class="field"><label>Assigned To</label><select id="t_member"><option value="">-- Select --</option></select></div>
+        <div class="field t_site_field"><label>Site Name</label>
+          <div class="ac-wrap"><input type="text" id="t_site_text" class="ac-input" placeholder="Type 2+ chars…" autocomplete="off" oninput="acInput('t_site',this.value)" onfocus="acInput('t_site',this.value)" onkeydown="acKey(event,'t_site')"><input type="hidden" id="t_site"><div class="ac-drop" id="t_site_drop"></div><button class="ac-clear" onclick="acClear('t_site')">✕</button></div>
+        </div>
+        <div class="field"><label>Issue Type</label><select id="t_issue"><option value="">-- Select Issue --</option></select></div>
+        <div class="field"><label>Issue Category</label>
+          <select id="t_issuecat"><option value="Software">💻 Software</option><option value="Hardware">🔧 Hardware</option><option value="Network">📡 Network</option><option value="Other">📋 Other</option></select>
+        </div>
+        <div class="field"><label>Priority</label>
+          <select id="t_priority"><option value="P1">P1 — High (SLA 24h)</option><option value="P2" selected>P2 — Medium (SLA 48h)</option><option value="P3">P3 — Low (SLA 72h)</option></select>
+        </div>
+        <div class="field"><label>Status</label>
+          <select id="t_status"><option value="Open">Open</option><option value="In Progress">In Progress</option><option value="Pending">Pending</option><option value="Closed">Closed</option><option value="Escalated">Escalated</option></select>
+        </div>
+        <div class="field"><label>Root Cause</label><select id="t_rca"><option value="">-- Select RCA --</option></select></div>
+      </div>
+      <div class="field" style="margin-bottom:12px"><label>Issue Details</label><textarea id="t_detail" placeholder="Describe the issue…"></textarea></div>
+      <div class="field" style="margin-bottom:12px"><label>Remark / Action Taken</label><textarea id="t_remark" placeholder="Actions taken, next steps…"></textarea></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="saveTask()">💾 Save Task</button>
+        <button class="btn btn-ghost" onclick="closeModal('taskModal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reassign Modal -->
+<div class="modal-overlay" id="reassignModal" style="display:none">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-head"><h2>🔄 Reassign Task</h2><button class="modal-close" onclick="closeModal('reassignModal')">✕</button></div>
+    <div class="modal-body">
+      <div id="reassignTaskInfo" style="background:var(--bg);border-radius:var(--r-sm);padding:12px;margin-bottom:14px;font-size:12px;line-height:1.7"></div>
+      <div class="field" style="margin-bottom:12px"><label>Reassign To</label><select id="ra_member"><option value="">-- Select Member --</option></select></div>
+      <div class="field" style="margin-bottom:12px"><label>Reason for Reassignment</label><textarea id="ra_remark" placeholder="Reason for reassignment…"></textarea></div>
+      <input type="hidden" id="ra_taskId">
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="doReassign()">✅ Confirm Reassign</button>
+        <button class="btn btn-ghost" onclick="closeModal('reassignModal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Close Task Modal -->
+<div class="modal-overlay" id="closeTaskModal" style="display:none">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-head"><h2>✅ Close Task</h2><button class="modal-close" onclick="closeModal('closeTaskModal')">✕</button></div>
+    <div class="modal-body">
+      <div id="closeTaskInfo" style="background:var(--bg);border-radius:var(--r-sm);padding:12px;margin-bottom:14px;font-size:12px;line-height:1.7"></div>
+      <div class="field" style="margin-bottom:12px"><label>Final Remark / Resolution</label><textarea id="ct_remark" placeholder="How was the issue resolved?…"></textarea></div>
+      <div class="field" style="margin-bottom:12px"><label>Root Cause</label><select id="ct_rca"><option value="">-- Select RCA --</option></select></div>
+      <input type="hidden" id="ct_taskId">
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="doCloseTask()">Mark as Closed</button>
+        <button class="btn btn-ghost" onclick="closeModal('closeTaskModal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Site Response Modal -->
+<div class="modal-overlay" id="siteResponseModal" style="display:none">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-head"><h2>📍 Update Site Status</h2><button class="modal-close" onclick="closeModal('siteResponseModal')">✕</button></div>
+    <div class="modal-body">
+      <div id="siteRespInfo" style="background:var(--bg);border-radius:var(--r-sm);padding:12px;margin-bottom:14px;font-size:12px"></div>
+      <div class="form-grid">
+        <div class="field"><label>Accessible?</label><select id="sr_accessible"><option value="Yes">✅ Yes</option><option value="No">❌ No</option></select></div>
+        <div class="field"><label>Current Status</label><select id="sr_status"><option value="Online">🟢 Online</option><option value="Offline">🔴 Offline</option><option value="Delay">🟡 Data Delay</option><option value="Intermittent">🟠 Intermittent</option></select></div>
+        <div class="field"><label>Root Cause</label><select id="sr_rca"><option value="">-- RCA --</option></select></div>
+        <div class="field"><label>Visit Required?</label><select id="sr_visit"><option value="No">No</option><option value="Yes">Yes</option></select></div>
+      </div>
+      <div class="field" style="margin-bottom:12px"><label>Remark</label><textarea id="sr_remark" placeholder="Your observations…"></textarea></div>
+      <input type="hidden" id="sr_siteId">
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="submitSiteResponse()">Submit &amp; Notify</button>
+        <button class="btn btn-ghost" onclick="closeModal('siteResponseModal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PCB Edit Modal -->
+<div class="modal-overlay" id="pcbModal" style="display:none">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-head"><h2>✏ Edit PCB Entry</h2><button class="modal-close" onclick="closeModal('pcbModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field"><label>Site Name</label>
+          <div class="ac-wrap"><input type="text" id="pm_site_text" class="ac-input" placeholder="Type 2+ chars…" autocomplete="off" oninput="acInput('pm_site',this.value)" onfocus="acInput('pm_site',this.value)" onkeydown="acKey(event,'pm_site')"><input type="hidden" id="pm_site"><div class="ac-drop" id="pm_site_drop"></div><button class="ac-clear" onclick="acClear('pm_site')">✕</button></div>
+        </div>
+        <div class="field"><label>PCB Type</label>
+          <select id="pm_type"><option>CPCB</option><option>MPCB</option><option>GSPCB</option><option>RSPCB</option><option>MPPCB</option><option>TNPCB</option><option>KEPCB</option><option>KPCB</option><option>GPCB</option><option>DPCB</option><option>TELPCB</option><option>HSPCB</option></select>
+        </div>
+        <div class="field"><label>Status</label>
+          <select id="pm_status"><option value="Live">✅ Live</option><option value="Inactive">❌ Inactive</option><option value="Pending">🕐 Pending</option><option value="Migration">🔄 Migration</option><option value="Error">⚠️ Error</option></select>
+        </div>
+        <div class="field"><label>Responsible Person</label><select id="pm_person"><option value="">-- Member --</option></select></div>
+      </div>
+      <div class="field" style="margin-bottom:12px"><label>Remark</label><input type="text" id="pm_remark" placeholder="Remark or next step…"></div>
+      <input type="hidden" id="pm_pcbId">
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="savePCBEdit()">Save Changes</button>
+        <button class="btn btn-ghost" onclick="closeModal('pcbModal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MIS Modal -->
+<div class="modal-overlay" id="misModal" style="display:none">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-head"><h2>📊 Generate MIS Report</h2><button class="modal-close" onclick="closeModal('misModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid" style="grid-template-columns:1fr 1fr">
+        <div class="field"><label>Report For</label><select id="mis_member"><option value="">All Team</option></select></div>
+        <div class="field"><label>Date</label><input type="date" id="mis_date"></div>
+      </div>
+      <div class="field" style="margin-bottom:12px"><label>Report Type</label>
+        <select id="mis_type"><option value="daily">Daily MIS</option><option value="tasks">Task Summary</option><option value="sites">Site Monitoring</option><option value="pcb">PCB Status</option><option value="full">Full Report</option></select>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="generateMIS()">📥 Download MIS (PDF)</button>
+        <button class="btn btn-ghost" onclick="closeModal('misModal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Password Management Modal -->
+<div class="modal-overlay" id="pwdMgmtModal" style="display:none">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-head"><h2>🔑 Manage Member Passwords</h2><button class="modal-close" onclick="closeModal('pwdMgmtModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="alert alert-info">As HOD, you can view and reset any team member's password.</div>
+      <table class="pwd-table">
+        <thead><tr><th>Member</th><th>Role</th><th>Password</th><th>Action</th></tr></thead>
+        <tbody id="pwdMgmtBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- SHELL -->
+<div class="shell">
+  <nav class="sidebar">
+    <div class="brand">
+      <div class="brand-name">🌿 Ecolyser</div>
+      <div class="brand-sub">Task Tracker v7.0</div>
+    </div>
+    <div style="padding:12px 8px">
+      <div class="user-pill">
+        <div class="avatar" id="sideAvatar">?</div>
+        <div style="flex:1;min-width:0">
+          <div class="user-name" id="sideUserName">—</div>
+          <div class="user-role" id="sideUserRole">Not logged in</div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="doLogout()">⬡ Sign Out</button>
+    </div>
+    <div class="nav-section">Main</div>
+    <div class="nav-item active" onclick="showNav('dashboard')" id="nav-dashboard"><span class="ico">📊</span> Dashboard</div>
+    <div class="nav-item" onclick="showNav('tasks')" id="nav-tasks"><span class="ico">✅</span> Task Manager <span class="nav-badge" id="openBadge" style="display:none">0</span></div>
+    <div class="nav-item" onclick="showNav('sites')" id="nav-sites"><span class="ico">🗺️</span> Site Monitoring</div>
+    <div class="nav-item" onclick="showNav('pcb')" id="nav-pcb"><span class="ico">📡</span> PCB Connectivity</div>
+    <div class="nav-section">Reports</div>
+    <div class="nav-item" onclick="showNav('productivity')" id="nav-productivity"><span class="ico">📈</span> Productivity</div>
+    <div class="nav-item" onclick="requestHOD()" id="nav-hod"><span class="ico">🔐</span> HOD Audit</div>
+    <div class="nav-section">Settings</div>
+    <div class="nav-item" onclick="showNav('config')" id="nav-config"><span class="ico">⚙️</span> Config &amp; Lists</div>
+    <div class="sidebar-footer">
+      <div class="sync-bar">
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="sync-dot" id="syncDot"></div>
+          <span id="syncStatus">Ready</span>
+        </div>
+        <div class="sync-progress"><div class="sync-progress-fill" id="syncProgressFill"></div></div>
+      </div>
+      <div id="siteCountLabel" style="font-size:10px;margin-top:4px;color:var(--g200)">0 Sites Loaded</div>
+    </div>
+  </nav>
+
+  <div class="main">
+    <div class="topbar">
+      <div><div class="tb-title" id="topTitle">Dashboard</div><div class="tb-date" id="topDate"></div></div>
+      <div class="tb-right">
+        <div style="position:relative">
+          <div class="notif-bell" id="notifBell" onclick="toggleNotifPanel()">🔔<span class="notif-count" id="notifCount" style="display:none">0</span></div>
+          <div class="notif-panel" id="notifPanel" style="display:none">
+            <div class="notif-header"><span>Notifications</span><span style="cursor:pointer;color:var(--g600)" onclick="markAllRead()">Mark all read</span></div>
+            <div id="notifList"></div>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="openMISForUser()">📊 MIS</button>
+        <button class="btn btn-ghost btn-sm" id="sheetsBtnTop" onclick="openModal('gsModal')" style="display:none">☁ Sheets</button>
+        <button class="btn btn-blue btn-sm" id="syncAllBtnTop" onclick="syncAllToGS()" style="display:none">↑ Sync All</button>
+        <button class="btn btn-primary btn-sm" onclick="openModal('taskModal');resetTaskModal()">+ Add Task</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="panel active" id="panel-dashboard">
+        <div class="page-title" id="dashGreeting">Good day 👋</div>
+        <div class="page-sub" id="dashWelcome">Loading…</div>
+        <div class="metrics-grid" id="dashMetrics"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <div class="card">
+            <div class="card-header"><div><div class="card-title">My Open Tasks</div><div class="card-sub">Tasks pending your action</div></div><button class="btn btn-ghost btn-sm" onclick="showNav('tasks')">View All →</button></div>
+            <div id="myTasksList"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div><div class="card-title">Site Snapshot</div><div class="card-sub">My assigned sites</div></div></div>
+            <div id="siteSnapshot"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div><div class="card-title">⚡ Quick Work Log</div><div class="card-sub">Log your activity instantly</div></div>
+            <div class="current-user-tag"><div class="avatar" id="qlAvatar" style="width:20px;height:20px;font-size:9px">?</div><span id="qlUserName">—</span></div>
+          </div>
+          <div class="form-grid">
+            <div class="field"><label>Site (optional)</label>
+              <div class="ac-wrap"><input type="text" id="ql_site_text" class="ac-input" placeholder="Type 2+ chars…" autocomplete="off" oninput="acInput('ql_site',this.value)" onfocus="acInput('ql_site',this.value)" onkeydown="acKey(event,'ql_site')"><input type="hidden" id="ql_site"><div class="ac-drop" id="ql_site_drop"></div><button class="ac-clear" onclick="acClear('ql_site')">✕</button></div>
+            </div>
+            <div class="field"><label>Task / Issue Type</label><select id="ql_issue"><option value="">-- Issue --</option></select></div>
+            <div class="field"><label>Priority</label>
+              <select id="ql_priority"><option value="P2">P2 — Medium</option><option value="P1">P1 — High</option><option value="P3">P3 — Low</option></select>
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:10px"><label>What did you do / Issue description?</label><textarea id="ql_remark" placeholder="Describe the task or issue…"></textarea></div>
+          <div class="btn-row"><button class="btn btn-primary" onclick="quickLog()">Log Work Now</button></div>
+          <div id="qlSuccess" class="alert alert-success" style="display:none;margin-top:10px">✅ Work logged successfully!</div>
+        </div>
+      </div>
+
+      <!-- TASK MANAGER -->
+      <div class="panel" id="panel-tasks">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px">
+          <div>
+            <div class="page-title">Task Manager</div>
+            <div class="page-sub" id="taskPanelSub">Assign, track, reassign — full audit trail.</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openModal('taskModal');resetTaskModal()">+ New Task</button>
+        </div>
+        <div class="metrics-grid" id="taskMetrics"></div>
+        <div class="tab-bar">
+          <button class="tab-btn active" onclick="switchTab('all',this)">All Tasks</button>
+          <button class="tab-btn" onclick="switchTab('mine',this)">Assigned to Me</button>
+          <button class="tab-btn" onclick="switchTab('assigned',this)">I Assigned</button>
+          <button class="tab-btn" onclick="switchTab('own',this)">My Own</button>
+        </div>
+        <div class="card">
+          <div class="filter-bar">
+            <select id="f_status" onchange="renderTasks()"><option value="">All Status</option><option>Open</option><option>In Progress</option><option>Pending</option><option>Closed</option><option>Escalated</option></select>
+            <select id="f_priority" onchange="renderTasks()"><option value="">All Priority</option><option value="P1">P1</option><option value="P2">P2</option><option value="P3">P3</option></select>
+            <select id="f_member" onchange="renderTasks()" style="display:none"><option value="">All Members</option></select>
+            <input type="text" id="f_search" placeholder="🔍 Search…" oninput="renderTasks()" style="min-width:160px">
+          </div>
+          <div class="table-wrap">
+            <table class="tracker">
+              <thead><tr>
+                <th>#</th><th>Logged</th><th>Assigned By</th><th>Assigned To</th><th>Site</th><th>Issue</th><th>Cat</th>
+                <th>Priority</th><th>Status</th><th>⏱ Aging</th><th>SLA</th><th>Reassigned</th><th>RCA</th><th>Remark</th><th>Actions</th>
+              </tr></thead>
+              <tbody id="taskBody"></tbody>
+            </table>
+          </div>
+          <div id="taskEmpty" class="empty" style="display:none">No tasks found.</div>
+        </div>
+      </div>
+
+      <!-- SITE MONITORING -->
+      <div class="panel" id="panel-sites">
+        <div class="page-title">Site Monitoring</div>
+        <div class="page-sub" id="sitePanelSub">Track offline sites, assign engineers, get responses.</div>
+        <div class="metrics-grid" id="siteMetrics"></div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Add / Update Site Status</div></div>
+          <div class="form-grid">
+            <div class="field"><label>Site Name</label>
+              <div class="ac-wrap"><input type="text" id="s_site_text" class="ac-input" placeholder="Type 2+ chars…" autocomplete="off" oninput="acInput('s_site',this.value)" onfocus="acInput('s_site',this.value)" onkeydown="acKey(event,'s_site')"><input type="hidden" id="s_site"><div class="ac-drop" id="s_site_drop"></div><button class="ac-clear" onclick="acClear('s_site')">✕</button></div>
+            </div>
+            <div class="field"><label>Current Status</label>
+              <select id="s_status"><option value="Online">🟢 Online</option><option value="Offline">🔴 Offline</option><option value="Delay">🟡 Data Delay</option><option value="Intermittent">🟠 Intermittent</option></select>
+            </div>
+            <div class="field"><label>Offline Duration (hrs)</label><input type="number" id="s_offline" placeholder="0" min="0"></div>
+            <div class="field"><label>Assign To</label><select id="s_eng"><option value="">-- Engineer --</option></select></div>
+          </div>
+          <div class="field" style="margin-bottom:10px"><label>Remark / Action</label><input type="text" id="s_action" placeholder="Initial remark…"></div>
+          <div class="btn-row"><button class="btn btn-primary" onclick="addSite()">Log &amp; Notify Engineer</button></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Site Status Log — Live Aging</div></div>
+          <div class="filter-bar">
+            <select id="f_siteStatus" onchange="renderSites()"><option value="">All Status</option><option>Online</option><option>Offline</option><option>Delay</option><option>Intermittent</option></select>
+            <select id="f_siteEng" onchange="renderSites()" style="display:none"><option value="">All Engineers</option></select>
+            <input type="text" id="f_siteSearch" placeholder="🔍 Search site…" oninput="renderSites()" style="min-width:140px">
+          </div>
+          <div class="table-wrap">
+            <table class="tracker">
+              <thead><tr>
+                <th>#</th><th>Logged</th><th>Site</th><th>Status</th><th>Offline (h)</th><th>Aging</th>
+                <th>Assigned To</th><th>Accessible?</th><th>RCA</th><th>Visit?</th><th>Remark</th><th>Actions</th>
+              </tr></thead>
+              <tbody id="siteBody"></tbody>
+            </table>
+          </div>
+          <div id="siteEmpty" class="empty">No site records yet.</div>
+        </div>
+      </div>
+
+      <!-- PCB -->
+      <div class="panel" id="panel-pcb">
+        <div class="page-title">PCB Connectivity Monitor</div>
+        <div class="page-sub" id="pcbPanelSub">Track SPCB/CPCB/MPCB data transmission status.</div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Log PCB Status</div></div>
+          <div class="form-grid">
+            <div class="field"><label>Site Name</label>
+              <div class="ac-wrap"><input type="text" id="p_site_text" class="ac-input" placeholder="Type 2+ chars…" autocomplete="off" oninput="acInput('p_site',this.value)" onfocus="acInput('p_site',this.value)" onkeydown="acKey(event,'p_site')"><input type="hidden" id="p_site"><div class="ac-drop" id="p_site_drop"></div><button class="ac-clear" onclick="acClear('p_site')">✕</button></div>
+            </div>
+            <div class="field"><label>PCB Type</label>
+              <select id="p_type"><option>CPCB</option><option>MPCB</option><option>GSPCB</option><option>RSPCB</option><option>MPPCB</option><option>TNPCB</option><option>KEPCB</option><option>KPCB</option><option>GPCB</option><option>DPCB</option><option>TELPCB</option><option>HSPCB</option></select>
+            </div>
+            <div class="field"><label>Status</label>
+              <select id="p_status"><option value="Live">✅ Live</option><option value="Inactive">❌ Inactive</option><option value="Pending">🕐 Pending</option><option value="Migration">🔄 Migration</option><option value="Error">⚠️ Error</option></select>
+            </div>
+            <div class="field"><label>Responsible Person</label><select id="p_person"><option value="">-- Member --</option></select></div>
+            <div class="field"><label>Remark / Next Action</label><input type="text" id="p_remark" placeholder="Remark or next step…"></div>
+          </div>
+          <div class="btn-row"><button class="btn btn-primary" onclick="addPCB()">Log PCB Entry</button></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">PCB Status Log</div></div>
+          <div class="table-wrap">
+            <table class="tracker">
+              <thead><tr><th>#</th><th>Logged</th><th>Site</th><th>PCB</th><th>Status</th><th>⏱ Aging</th><th>Person</th><th>Remark</th><th>Actions</th></tr></thead>
+              <tbody id="pcbBody"></tbody>
+            </table>
+          </div>
+          <div id="pcbEmpty" class="empty">No PCB entries yet.</div>
+        </div>
+      </div>
+
+      <!-- PRODUCTIVITY -->
+      <div class="panel" id="panel-productivity">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+          <div><div class="page-title">Productivity</div><div class="page-sub" id="prodPanelSub">Performance and activity logs.</div></div>
+          <button class="btn btn-primary" onclick="openMISForUser()">📥 Download MIS</button>
+        </div>
+        <div class="prod-grid" id="prodCards"></div>
+        <div class="card">
+          <div class="card-header"><div><div class="card-title">Work Logs</div><div class="card-sub" id="prodLogSub">Activity logs</div></div></div>
+          <div class="filter-bar">
+            <select id="f_prodMember" onchange="renderProd()" style="display:none"><option value="">All Members</option></select>
+            <input type="date" id="f_prodDate" onchange="renderProd()">
+            <button class="btn btn-ghost btn-sm" onclick="document.getElementById('f_prodDate').value='';renderProd()">Clear Date</button>
+          </div>
+          <div class="table-wrap">
+            <table class="tracker">
+              <thead><tr><th>Time</th><th>Member</th><th>Site</th><th>Issue</th><th>Priority</th><th>Status</th><th>Points</th><th>Remark</th></tr></thead>
+              <tbody id="prodBody"></tbody>
+            </table>
+          </div>
+          <div id="prodEmpty" class="empty">No activity logs yet.</div>
+        </div>
+      </div>
+
+      <!-- HOD AUDIT -->
+      <div class="panel" id="panel-hod">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+          <div>
+            <div class="page-title">HOD Audit Panel 🔐 <span class="live-badge"><span class="live-pulse"></span>LIVE</span></div>
+            <div class="page-sub" id="hodLastRefresh">Full visibility — HOD (Pooja) access only.</div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary btn-sm" onclick="exportHODReport()">📥 Full Report</button>
+            <button class="btn btn-ghost btn-sm" onclick="openModal('misModal');initMISModal()">📊 MIS</button>
+            <button class="btn btn-blue btn-sm" onclick="syncAllToGS()">☁ Sync All</button>
+            <button class="btn btn-ghost btn-sm" onclick="openModal('gsModal')">⚙ Sheets</button>
+            <button class="btn btn-amber btn-sm" onclick="openPwdMgmt()">🔑 Passwords</button>
+            <button class="btn btn-ghost btn-sm" onclick="lockHOD()">🔒 Lock</button>
+          </div>
+        </div>
+
+        <div class="gs-banner">
+          <div>
+            <div style="color:#fff;font-size:13px;font-weight:500">☁ Google Sheets — HOD Live View</div>
+            <div style="color:var(--g200);font-size:11px;margin-top:2px" id="gsSheetLink">Configure Google Sheets to auto-sync all data</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.3)" onclick="syncAllToGS()">↑ Sync All Now</button>
+            <button class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.2)" onclick="openModal('gsModal')">Configure</button>
+          </div>
+        </div>
+
+        <div class="metrics-grid" id="hodMetrics"></div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <div class="card"><div class="hod-section"><h3>Daily Audit Checklist</h3><div id="auditList"></div></div></div>
+          <div class="card"><div class="hod-section"><h3>Escalated / P1 Open Issues</h3><div id="hodEscalated"></div></div></div>
+        </div>
+
+        <div class="card">
+          <div class="hod-section">
+            <h3>📋 All Tasks — Full Team <span style="font-size:11px;color:var(--mid);font-weight:400">(HOD can delete entries here)</span></h3>
+            <div class="filter-bar" style="margin-bottom:10px">
+              <select id="hod_f_status" onchange="renderHODAllTasks()"><option value="">All Status</option><option>Open</option><option>In Progress</option><option>Pending</option><option>Closed</option><option>Escalated</option></select>
+              <select id="hod_f_member" onchange="renderHODAllTasks()"><option value="">All Members</option></select>
+              <input type="text" id="hod_f_search" placeholder="🔍 Search…" oninput="renderHODAllTasks()" style="min-width:140px">
+            </div>
+            <div class="table-wrap"><div id="hodAllTasks"></div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="hod-section">
+            <h3>Team Productivity Summary</h3>
+            <div id="hodProdTable"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="hod-section">
+            <h3>🔄 Reassignment Audit Trail</h3>
+            <div id="hodAssignAudit"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="hod-section">
+            <h3>📍 Offline Sites Requiring Attention</h3>
+            <div id="hodOfflineSites"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="hod-section">
+            <h3>📡 PCB Connectivity Issues</h3>
+            <div id="hodPCBIssues"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="hod-section">
+            <h3>📜 All Activity Log — Every Action by Every Member</h3>
+            <div class="filter-bar" style="margin-bottom:10px">
+              <select id="hod_act_member" onchange="renderHODActivityLog()"><option value="">All Members</option></select>
+              <input type="date" id="hod_act_date" onchange="renderHODActivityLog()">
+              <button class="btn btn-ghost btn-sm" onclick="document.getElementById('hod_act_date').value='';renderHODActivityLog()">Clear</button>
+            </div>
+            <div id="hodActivityLog"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div class="card-title">HOD Remarks &amp; Sign-off</div></div>
+          <div class="field" style="margin-bottom:14px"><label>HOD Observations / Instructions</label><textarea id="hodRemarks" placeholder="Enter observations for today…" style="min-height:90px"></textarea></div>
+          <button class="btn btn-primary" onclick="signOffHOD()">Sign-off &amp; Save</button>
+          <div id="signOffResult" style="margin-top:10px;font-size:12px"></div>
+        </div>
+      </div>
+
+      <!-- CONFIG -->
+      <div class="panel" id="panel-config">
+        <div class="page-title">Configuration &amp; Lists</div>
+        <div class="page-sub">Manage sites, issue types, root causes and settings.</div>
+        <div id="hodConfigBanner" style="display:none" class="alert alert-info">🔐 HOD mode: Full access — manage members, passwords and data.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="card" id="memberConfigCard" style="display:none">
+            <div class="card-header"><div class="card-title">Team Members</div><button class="btn btn-ghost btn-sm" onclick="addListItem('members')">+ Add</button></div>
+            <div id="list-members" style="max-height:200px;overflow-y:auto"></div>
+            <div class="field" style="margin-top:10px"><input type="text" id="new-members" placeholder="Add team member…" onkeydown="if(event.key==='Enter')addListItem('members')"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Site Names</div>
+              <div style="display:flex;gap:6px">
+                <button class="btn btn-ghost btn-sm" onclick="document.getElementById('excelUpload').click()">📂 Excel</button>
+                <button class="btn btn-ghost btn-sm" onclick="addListItem('sites')">+ Add</button>
+              </div>
+            </div>
+            <input type="file" id="excelUpload" accept=".csv,.xlsx,.xls" style="display:none" onchange="importSitesFromExcel(this)">
+            <div class="excel-upload-zone" onclick="document.getElementById('excelUpload').click()">
+              <div style="font-size:20px;margin-bottom:6px">📊</div>
+              <div style="font-size:12px;font-weight:600;color:var(--mid)">Click to upload Excel / CSV with site names</div>
+              <div style="font-size:10px;color:var(--light);margin-top:4px">Column A = site names. Header row auto-detected.</div>
+            </div>
+            <div id="list-sites" style="max-height:160px;overflow-y:auto"></div>
+            <div class="field" style="margin-top:10px"><input type="text" id="new-sites" placeholder="Or add site manually…" onkeydown="if(event.key==='Enter')addListItem('sites')"></div>
+            <div id="excelImportResult" style="font-size:11px;margin-top:6px"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Issue Types</div><button class="btn btn-ghost btn-sm" onclick="addListItem('issues')">+ Add</button></div>
+            <div id="list-issues" style="max-height:200px;overflow-y:auto"></div>
+            <div class="field" style="margin-top:10px"><input type="text" id="new-issues" placeholder="Add issue type…" onkeydown="if(event.key==='Enter')addListItem('issues')"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Root Causes</div><button class="btn btn-ghost btn-sm" onclick="addListItem('rcas')">+ Add</button></div>
+            <div id="list-rcas" style="max-height:200px;overflow-y:auto"></div>
+            <div class="field" style="margin-top:10px"><input type="text" id="new-rcas" placeholder="Add root cause…" onkeydown="if(event.key==='Enter')addListItem('rcas')"></div>
+          </div>
+        </div>
+        <div class="card" id="hodPwdCard" style="display:none">
+          <div class="card-header"><div class="card-title">HOD Password</div></div>
+          <div class="alert alert-warn">⚠ Change HOD master password carefully.</div>
+          <div class="form-grid">
+            <div class="field"><label>Current HOD Password</label><input type="password" id="pwdCurrent"></div>
+            <div class="field"><label>New Password</label><input type="password" id="pwdNew"></div>
+            <div class="field"><label>Confirm New Password</label><input type="password" id="pwdConfirm"></div>
+          </div>
+          <div class="btn-row"><button class="btn btn-amber" onclick="changePassword()">Update HOD Password</button></div>
+          <div id="pwdResult" style="font-size:12px;margin-top:8px"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">🔔 Desktop Notifications</div></div>
+          <div style="font-size:12px;color:var(--mid);margin-bottom:12px">Status: <span id="desktopNotifStatusInline"><span style="color:var(--amber)">⚠ Checking…</span></span></div>
+          <div class="btn-row">
+            <button class="btn btn-primary btn-sm" onclick="requestDesktopNotif()">Enable Notifications</button>
+            <button class="btn btn-ghost btn-sm" onclick="sendTestNotif()">Send Test</button>
+          </div>
+        </div>
+        <div class="card" id="dataManagementCard" style="display:none">
+          <div class="card-header"><div class="card-title">Data Management</div></div>
+          <div class="btn-row">
+            <button class="btn btn-ghost" onclick="exportJSON()">Export All Data (JSON)</button>
+            <button class="btn btn-blue" onclick="syncAllToGS()">☁ Force Sync All to Sheets</button>
+            <button class="btn btn-danger btn-sm" onclick="clearAllData()">⚠ Reset All Data</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════════════════════════════════════════════
+const APP_VERSION   = 'v7.0-20250411';
+const HOD_NAME      = 'Pooja';
+const FIXED_MEMBERS = ['Pooja','Kyle','Sameer','Pratiksha','Sailee'];
+const DEFAULT_PASSWORDS = {
+  Pooja:'HOD@2025', Kyle:'Kyle@123', Sameer:'Sameer@123',
+  Pratiksha:'Pratiksha@123', Sailee:'Sailee@123'
+};
+const DEFAULT_ISSUES = [
+  'Site Offline','Data Not Uploading','PCB Connectivity Failure','Sensor Fault',
+  'HMI Issue','Data Logger Fault','SMPS Failure','MicroSD Issue','Modbus Error',
+  'SIM / Network Issue','Compliance Risk','Client Escalation','Master Data Update',
+  'AMC / CAMC Task','Preventive Maintenance','Stock / Hardware Issue',
+  'PCB Fresh Registration','Vendor Migration','Server Issue','Other'
+];
+const DEFAULT_RCAS = [
+  'Power Outage at Site','Network / SIM Issue','Hardware Failure','Configuration Error',
+  'Software Bug','PCB Portal Down','Site Not Accessible Remotely','Client-Side Issue',
+  'Pending Client Action / PO','Weather / Physical Damage','Under Investigation','Resolved'
+];
+
+// ══════════════════════════════════════════════════════════════════════════════
+// STORE — reliable localStorage wrapper
+// ══════════════════════════════════════════════════════════════════════════════
+const STORE = {
+  get(k)  { try { const v=localStorage.getItem('eco7_'+k); return v?JSON.parse(v):null; } catch(e){ return null; } },
+  set(k,v){ try { localStorage.setItem('eco7_'+k, JSON.stringify(v)); } catch(e){} },
+  del(k)  { try { localStorage.removeItem('eco7_'+k); } catch(e){} }
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// STATE — loaded fresh from localStorage on every page load
+// ══════════════════════════════════════════════════════════════════════════════
+let tasks         = STORE.get('tasks')         || [];
+let sites         = STORE.get('sites')         || [];
+let pcbs          = STORE.get('pcbs')          || [];
+let logs          = STORE.get('logs')          || [];
+let activityLog   = STORE.get('activityLog')   || [];
+let notifications = STORE.get('notifs')        || [];
+let gsConfig      = STORE.get('gsConfig')      || { url:'', sheet:'EcolyserData' };
+let hodPassword   = STORE.get('hodPwd')        || DEFAULT_PASSWORDS[HOD_NAME];
+let userPasswords = STORE.get('userPwds')      || {};
+FIXED_MEMBERS.forEach(m=>{ if(!userPasswords[m]) userPasswords[m]=DEFAULT_PASSWORDS[m]; });
+STORE.set('userPwds', userPasswords);
+
+let currentUser  = '';
+let hodUnlocked  = false;
+let activeTaskTab= 'all';
+
+// Lists — sites start EMPTY, issues/rcas seeded with defaults if first run
+let lists = (function(){
+  const saved = STORE.get('lists') || {};
+  return {
+    members : FIXED_MEMBERS,
+    sites   : saved.sites   || [],
+    issues  : (saved.issues  && saved.issues.length)  ? saved.issues  : [...DEFAULT_ISSUES],
+    rcas    : (saved.rcas    && saved.rcas.length)    ? saved.rcas    : [...DEFAULT_RCAS]
+  };
+})();
+STORE.set('lists', lists);
+
+function saveData(key, arr){ STORE.set(key, arr); }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// GOOGLE SHEETS SYNC
+// ══════════════════════════════════════════════════════════════════════════════
+let _syncQueue   = [];
+let _syncTimer   = null;
+let _syncPending = 0;
+
+function setSyncState(state, label){
+  const dot=document.getElementById('syncDot');
+  const status=document.getElementById('syncStatus');
+  const bar=document.getElementById('syncProgressFill');
+  if(!dot||!status) return;
+  dot.className='sync-dot'+(state==='error'?' error':state==='syncing'?' syncing':'');
+  status.textContent=label||'Ready';
+  if(bar){
+    if(state==='syncing'){ bar.style.width='60%'; bar.style.background='var(--amber)'; }
+    else if(state==='ok'){ bar.style.width='100%'; bar.style.background='var(--g400)'; setTimeout(()=>bar.style.width='0%',1400); }
+    else if(state==='error'){ bar.style.width='100%'; bar.style.background='var(--red)'; }
+    else bar.style.width='0%';
+  }
+}
+
+function _flushSyncQueue(){
+  _syncTimer=null;
+  if(!gsConfig.url || _syncQueue.length===0) return;
+  const batch=[..._syncQueue]; _syncQueue=[];
+  _syncPending++;
+  setSyncState('syncing','Syncing…');
+  const maxChunk=40;
+  for(let i=0;i<batch.length;i+=maxChunk){
+    const chunk=batch.slice(i,i+maxChunk);
+    fetch(gsConfig.url,{ method:'POST', mode:'no-cors', body:JSON.stringify({action:'batchAppend',batches:chunk}) })
+      .then(()=>{ _syncPending=Math.max(0,_syncPending-1); if(_syncPending===0) setSyncState('ok','Synced '+new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})); })
+      .catch(()=>{ _syncPending=Math.max(0,_syncPending-1); setSyncState('error','Sync failed'); });
+  }
+}
+
+function syncToGS(sheet, row){
+  if(!gsConfig.url) return;
+  _syncQueue.push({sheet,row});
+  if(_syncTimer) clearTimeout(_syncTimer);
+  _syncTimer=setTimeout(_flushSyncQueue, 700);
+}
+
+function syncToGSNow(sheet, row){
+  if(!gsConfig.url) return;
+  setSyncState('syncing','Saving…');
+  fetch(gsConfig.url,{ method:'POST', mode:'no-cors', body:JSON.stringify({action:'append',sheet,row}) })
+    .then(()=>setSyncState('ok','Saved'))
+    .catch(()=>setSyncState('error','Sync error'));
+}
+
+function deleteFromGS(sheet, id){
+  if(!gsConfig.url){ alert('No Google Sheets URL configured. Delete only done locally.'); return; }
+  fetch(gsConfig.url,{ method:'POST', mode:'no-cors', body:JSON.stringify({action:'deleteRow',sheet,id:String(id)}) })
+    .then(()=>showInAppToast('🗑 Deleted','Row removed from Google Sheets.'))
+    .catch(()=>showInAppToast('⚠ Delete sent','Could not confirm deletion from Sheet.'));
+}
+
+function syncAllToGS(){
+  if(!gsConfig.url){ showInAppToast('⚠ Not Configured','Please configure Google Sheets URL first.'); openModal('gsModal'); return; }
+  showInAppToast('☁ Syncing All Data','Pushing everything to Google Sheets…');
+  setSyncState('syncing','Full sync…');
+  const res=document.getElementById('gsSyncResult');
+  if(res) res.innerHTML='<span style="color:var(--amber)">⏳ Syncing…</span>';
+
+  const headers=[
+    {sheet:'Tasks',        rows:[['ID','Logged At','Assigned By','Assigned To','Site','Issue','Category','Priority','Status','RCA','Remark','Closure Time','Reassign Count','Task Type']]},
+    {sheet:'WorkLogs',     rows:[['Logged At','Member','Site','Issue','Priority','Status','Points','Remark','Type']]},
+    {sheet:'Sites',        rows:[['ID','Logged At','Site','Status','Offline Hrs','Engineer','Remark','Added By','Accessible','RCA','Visit Required','Response Remark','Closed By']]},
+    {sheet:'PCB',          rows:[['ID','Logged At','Site','PCB Type','Status','Person','Remark','Added By','Last Updated']]},
+    {sheet:'Reassignments',rows:[['Task ID','Reassigned At','From','To','By','Issue','Site','Remark']]},
+    {sheet:'Activities',   rows:[['ID','Timestamp','Member','Action','Detail','Related ID']]},
+    {sheet:'HOD_Signoff',  rows:[['Signed At','Signed By','Remarks']]}
+  ];
+  headers.forEach(h=>fetch(gsConfig.url,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'replace',sheet:h.sheet,rows:h.rows})}).catch(()=>{}));
+
+  setTimeout(()=>{
+    tasks.forEach(t=>{
+      syncToGS('Tasks',[t.id,fmt(t.ts),t.assignedBy||'',t.member,t.site||'',t.issue||'',t.issuecat||'',t.priority||'',t.status||'',t.rca||'',t.remark||'',closureTime(t),(t.reassignChain||[]).length,t.isOwnTask?'Own Task':'Site Task']);
+      (t.reassignChain||[]).forEach(c=>syncToGS('Reassignments',[t.id,fmt(c.ts),c.from,c.to,c.by||'',t.issue||'',t.site||'',c.remark||'']));
+    });
+    logs.forEach(l=>syncToGS('WorkLogs',[fmt(l.ts),l.member,l.site||'',l.issue||'',l.priority||'',l.status||'',l.points||0,l.remark||'',l.type||'log']));
+    sites.forEach(s=>syncToGS('Sites',[s.id,fmt(s.ts),s.site,s.status,s.offlineHrs||0,s.engineer||'',s.action||'',s.addedBy||'',s.accessible||'',s.rca||'',s.visitRequired||'',s.responseRemark||'',s.closedAt?('Closed by '+(s.closedBy||'?')):'Open']));
+    pcbs.forEach(p=>syncToGS('PCB',[p.id,fmt(p.ts),p.site,p.type,p.status,p.person||'',p.remark||'',p.addedBy||'',p.updatedAt?fmt(p.updatedAt):'']));
+    activityLog.forEach(a=>syncToGS('Activities',[a.id,fmt(a.ts),a.member,a.action,a.detail||'',a.relatedId||'']));
+    if(_syncTimer){ clearTimeout(_syncTimer); _flushSyncQueue(); }
+    setTimeout(()=>{
+      const msg=`Synced: ${tasks.length} tasks · ${logs.length} logs · ${sites.length} sites · ${pcbs.length} PCBs · ${activityLog.length} activities`;
+      showInAppToast('✅ Sync Complete',msg,'☁');
+      setSyncState('ok','Full sync done');
+      if(res) res.innerHTML=`<span style="color:var(--g500)">✅ ${msg}</span>`;
+    },2800);
+  },800);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════════════════════════════
+function now(){ return new Date().toISOString(); }
+function uid(){ return Date.now()+(Math.random()*9999|0); }
+function fmt(iso){
+  if(!iso) return '-';
+  const d=new Date(iso);
+  return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+}
+function agingStr(iso, status){
+  if(status==='Closed') return '<span class="aging-val aging-ok-txt">Closed</span>';
+  const ms=Date.now()-new Date(iso).getTime();
+  const h=Math.floor(ms/3600000), m=Math.floor((ms%3600000)/60000);
+  const cls=h>=72?'aging-crit-txt':h>=48?'aging-warn-txt':'aging-ok-txt';
+  return `<span class="aging-val ${cls}">${h}h ${m}m</span>`;
+}
+function agingClass(iso, status){
+  if(status==='Closed') return '';
+  const h=(Date.now()-new Date(iso).getTime())/3600000;
+  return h>=72?'aging-crit':h>=48?'aging-warn':'';
+}
+function slaStatus(iso, priority, status){
+  if(status==='Closed') return '<span class="badge badge-green">✓ Met</span>';
+  const h=(Date.now()-new Date(iso).getTime())/3600000;
+  const sla=priority==='P1'?24:priority==='P2'?48:72;
+  return h>sla
+    ?`<span class="badge badge-red">⚠ +${Math.round(h-sla)}h</span>`
+    :`<span class="badge badge-amber">${Math.round(h/sla*100)}%</span>`;
+}
+function pBadge(p){ return `<span class="badge badge-${p==='P1'?'p1':p==='P2'?'p2':'p3'}">${p||'-'}</span>`; }
+function sBadge(s){ const m={Open:'blue','In Progress':'amber',Closed:'green',Escalated:'red',Pending:'gray'}; return `<span class="badge badge-${m[s]||'gray'}">${s||'-'}</span>`; }
+function stBadge(s){ const m={Online:'green',Offline:'red',Delay:'amber',Intermittent:'amber'}; return `<span class="badge badge-${m[s]||'gray'}"><span class="online-dot dot-${m[s]||'gray'}"></span>${s}</span>`; }
+function pcbBadge(s){ const m={Live:'green',Inactive:'red',Pending:'amber',Migration:'amber',Error:'red'}; return `<span class="badge badge-${m[s]||'gray'}">${s}</span>`; }
+function catBadge(c){ const m={Software:'blue',Hardware:'amber',Network:'purple',Other:'gray'}; return c?`<span class="badge badge-${m[c]||'gray'}">${c}</span>`:'-'; }
+
+const COLORS=['#0F6E56','#2563EB','#D97706','#DC2626','#7C3AED','#059669','#0891B2','#DB2777'];
+function avatarColor(name){ const i=FIXED_MEMBERS.indexOf(name); return COLORS[Math.abs(i>=0?i:0)%COLORS.length]||COLORS[0]; }
+function initials(name){ return (name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
+
+function pts(task){
+  let p=0;
+  const h=(Date.now()-new Date(task.ts).getTime())/3600000;
+  const sla=task.priority==='P1'?24:task.priority==='P2'?48:72;
+  if(task.status==='Closed'){ p+=h<=sla?(task.priority==='P1'?20:task.priority==='P2'?15:10):5; }
+  if(task.rca) p+=5;
+  if(task.remark) p+=3;
+  return p;
+}
+function closureTime(task){
+  if(!task.closedAt) return '-';
+  const ms=new Date(task.closedAt)-new Date(task.ts);
+  const h=Math.floor(ms/3600000), m=Math.floor((ms%3600000)/60000);
+  return `${h}h ${m}m`;
+}
+function isHOD(){ return currentUser===HOD_NAME || hodUnlocked; }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ACTIVITY LOG — records every action for HOD visibility
+// ══════════════════════════════════════════════════════════════════════════════
+function logActivity(action, detail, relatedId){
+  const entry={ id:uid(), ts:now(), member:currentUser, action, detail:detail||'', relatedId:relatedId||'' };
+  activityLog.unshift(entry);
+  if(activityLog.length>1000) activityLog=activityLog.slice(0,1000);
+  saveData('activityLog', activityLog);
+  syncToGS('Activities',[entry.id,fmt(entry.ts),entry.member,entry.action,entry.detail,entry.relatedId]);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// LOGIN / AUTH
+// ══════════════════════════════════════════════════════════════════════════════
+function populateLoginSelect(){
+  const sel=document.getElementById('loginName');
+  sel.innerHTML='<option value="">-- Select Your Name --</option>';
+  FIXED_MEMBERS.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; sel.appendChild(o); });
+}
+function getUserPassword(name){
+  if(name===HOD_NAME) return hodPassword;
+  return userPasswords[name]||DEFAULT_PASSWORDS[name]||'eco123';
+}
+function doLogin(){
+  const name=document.getElementById('loginName').value;
+  const pwd =document.getElementById('loginPwd').value;
+  const err =document.getElementById('loginError');
+  err.style.display='none';
+  if(!name){ err.textContent='Please select your name.'; err.style.display='block'; return; }
+  if(!pwd) { err.textContent='Please enter your password.'; err.style.display='block'; return; }
+  if(pwd!==getUserPassword(name)){ err.textContent='Incorrect password. Please try again.'; err.style.display='block'; document.getElementById('loginPwd').value=''; return; }
+  currentUser=name;
+  if(name===HOD_NAME) hodUnlocked=true;
+  STORE.set('session',{name,ts:now()});
+  document.getElementById('loginOverlay').style.display='none';
+  onAfterLogin();
+}
+function doLogout(){
+  if(!confirm('Sign out?')) return;
+  currentUser=''; hodUnlocked=false;
+  STORE.set('session',null);
+  document.getElementById('loginOverlay').style.display='flex';
+  document.getElementById('loginPwd').value='';
+  document.getElementById('loginName').value='';
+  document.getElementById('loginError').style.display='none';
+  document.getElementById('sheetsBtnTop').style.display='none';
+  document.getElementById('syncAllBtnTop').style.display='none';
+}
+function onAfterLogin(){
+  updateSidebarUser();
+  updateQuickLogUser();
+  populateAllSelects();
+  renderLists();
+  refreshDash();
+  renderTaskMetrics();
+  renderSiteMetrics();
+  renderPCB();
+  updateNotifBadge();
+  refreshNotifStatus();
+  showNav('dashboard');
+  applyHODVisibility();
+  showInAppToast('👋 Welcome!', `Logged in as ${currentUser}${isHOD()?' (HOD)':''}.`);
+}
+function applyHODVisibility(){
+  const hod=isHOD();
+  document.getElementById('sheetsBtnTop').style.display=hod?'':'none';
+  document.getElementById('syncAllBtnTop').style.display=(hod&&gsConfig.url)?'':'none';
+  document.getElementById('memberConfigCard').style.display=hod?'':'none';
+  document.getElementById('hodPwdCard').style.display=hod?'':'none';
+  document.getElementById('hodConfigBanner').style.display=hod?'flex':'none';
+  document.getElementById('dataManagementCard').style.display=hod?'':'none';
+}
+function updateSidebarUser(){
+  const av=document.getElementById('sideAvatar');
+  av.textContent=initials(currentUser)||'?';
+  av.style.background=avatarColor(currentUser)||'var(--g500)';
+  document.getElementById('sideUserName').textContent=currentUser||'—';
+  document.getElementById('sideUserRole').textContent=isHOD()?'HOD — Full Access':'Engineer';
+}
+function updateQuickLogUser(){
+  const av=document.getElementById('qlAvatar');
+  av.textContent=initials(currentUser)||'?';
+  av.style.background=avatarColor(currentUser)||'var(--g500)';
+  document.getElementById('qlUserName').textContent=currentUser||'—';
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PASSWORD MANAGEMENT
+// ══════════════════════════════════════════════════════════════════════════════
+function openPwdMgmt(){ if(!hodUnlocked){alert('HOD access required.');return;} renderPwdTable(); openModal('pwdMgmtModal'); }
+function renderPwdTable(){
+  const tbody=document.getElementById('pwdMgmtBody');
+  tbody.innerHTML=FIXED_MEMBERS.map(m=>`
+    <tr>
+      <td><div style="display:flex;align-items:center;gap:6px"><div class="avatar" style="width:22px;height:22px;font-size:9px;background:${avatarColor(m)}">${initials(m)}</div>${m}</div></td>
+      <td>${m===HOD_NAME?'<span class="badge badge-green">HOD</span>':'<span class="badge badge-blue">Engineer</span>'}</td>
+      <td><input type="password" id="mpwd_${m}" value="${getUserPassword(m)}" style="max-width:160px"></td>
+      <td><button class="btn btn-primary btn-sm" onclick="saveMemberPwd('${m}')">Save</button></td>
+    </tr>`).join('');
+}
+function saveMemberPwd(name){
+  const el=document.getElementById('mpwd_'+name);
+  const np=el?el.value.trim():'';
+  if(np.length<4){alert('Minimum 4 characters.');return;}
+  if(name===HOD_NAME){ hodPassword=np; STORE.set('hodPwd',hodPassword); }
+  userPasswords[name]=np; STORE.set('userPwds',userPasswords);
+  showInAppToast('✅ Password Updated',`Password for ${name} updated.`);
+  logActivity('Password Changed',`HOD changed password for ${name}`);
+}
+function changePassword(){
+  const curr=document.getElementById('pwdCurrent').value;
+  const nw  =document.getElementById('pwdNew').value;
+  const conf=document.getElementById('pwdConfirm').value;
+  const res =document.getElementById('pwdResult');
+  if(curr!==hodPassword){ res.innerHTML='<span style="color:var(--red)">Current password incorrect.</span>'; return; }
+  if(nw!==conf){ res.innerHTML='<span style="color:var(--red)">Passwords do not match.</span>'; return; }
+  if(nw.length<6){ res.innerHTML='<span style="color:var(--red)">Min 6 characters.</span>'; return; }
+  hodPassword=nw; STORE.set('hodPwd',hodPassword);
+  userPasswords[HOD_NAME]=nw; STORE.set('userPwds',userPasswords);
+  res.innerHTML='<span style="color:var(--g500)">✅ Password updated!</span>';
+  ['pwdCurrent','pwdNew','pwdConfirm'].forEach(id=>document.getElementById(id).value='');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════════════════════════════════════
+let toastTimer=null;
+function showInAppToast(title,msg,icon='🔔'){
+  const t=document.getElementById('notifToast');
+  document.getElementById('toastTitle').textContent=title;
+  document.getElementById('toastMsg').textContent=msg;
+  document.getElementById('toastIcon').textContent=icon;
+  t.classList.add('show'); clearTimeout(toastTimer);
+  toastTimer=setTimeout(hideToast,5000);
+}
+function hideToast(){ document.getElementById('notifToast').classList.remove('show'); }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// DESKTOP NOTIFICATIONS
+// ══════════════════════════════════════════════════════════════════════════════
+function getNotifPerm(){ return !('Notification' in window)?'unsupported':Notification.permission; }
+function refreshNotifStatus(){
+  const el=document.getElementById('desktopNotifStatusInline'); if(!el) return;
+  const p=getNotifPerm();
+  el.innerHTML=p==='granted'?'<span style="color:var(--g500)">✅ Enabled</span>':p==='denied'?'<span style="color:var(--red)">❌ Blocked</span>':p==='unsupported'?'<span style="color:var(--red)">❌ Not supported</span>':'<span style="color:var(--amber)">⚠ Not yet enabled</span>';
+}
+function requestDesktopNotif(){
+  if(!('Notification' in window)){ showInAppToast('❌ Not supported','Browser does not support notifications.'); return; }
+  if(Notification.permission==='granted'){ triggerDesktopNotif('✅ Ecolyser','Notifications active!'); refreshNotifStatus(); return; }
+  if(Notification.permission==='denied'){ showInAppToast('❌ Blocked','Allow notifications in browser settings.'); return; }
+  Notification.requestPermission().then(p=>{ refreshNotifStatus(); if(p==='granted') triggerDesktopNotif('✅ Ecolyser','Notifications enabled!'); });
+}
+function sendTestNotif(){ if(getNotifPerm()==='granted') triggerDesktopNotif('🔔 Test','Working! ✅'); else requestDesktopNotif(); }
+function triggerDesktopNotif(title, body){
+  if(!('Notification' in window)||Notification.permission!=='granted') return;
+  try{ const n=new Notification(title,{body,tag:'eco-'+Date.now()}); n.onclick=()=>{window.focus();n.close();}; }catch(e){}
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// IN-APP NOTIFICATIONS
+// ══════════════════════════════════════════════════════════════════════════════
+function addNotification(to, msg, taskId){
+  if(!to) return;
+  const n={ id:uid(), to, msg, taskId, ts:now(), read:false };
+  notifications.unshift(n);
+  if(notifications.length>300) notifications=notifications.slice(0,300);
+  saveData('notifs', notifications);
+  updateNotifBadge();
+  if(to===currentUser){ showInAppToast('🔔 New Notification', msg); triggerDesktopNotif('🔔 Ecolyser', msg); }
+  // Also notify HOD of every activity
+  if(to!==HOD_NAME && currentUser!==HOD_NAME){
+    const hodN={ id:uid(), to:HOD_NAME, msg:`[${currentUser}→${to}] ${msg}`, taskId, ts:now(), read:false };
+    notifications.unshift(hodN);
+    saveData('notifs', notifications);
+    updateNotifBadge();
+  }
+}
+function updateNotifBadge(){
+  const mine=notifications.filter(n=>n.to===currentUser&&!n.read);
+  const cnt=document.getElementById('notifCount');
+  if(cnt){ cnt.textContent=mine.length; cnt.style.display=mine.length?'flex':'none'; }
+  const badge=document.getElementById('openBadge');
+  const openCount=getVisibleTasks().filter(t=>t.status!=='Closed').length;
+  if(badge){ badge.textContent=openCount; badge.style.display=openCount?'inline':'none'; }
+}
+function toggleNotifPanel(){
+  const p=document.getElementById('notifPanel');
+  p.style.display=p.style.display==='none'?'block':'none';
+  if(p.style.display==='block') renderNotifPanel();
+}
+function renderNotifPanel(){
+  const mine=notifications.filter(n=>n.to===currentUser).slice(0,30);
+  document.getElementById('notifList').innerHTML=mine.length
+    ?mine.map(n=>`<div class="notif-item ${n.read?'':'unread'}" onclick="readNotif(${n.id},${n.taskId||'null'})">
+        <div style="font-weight:${n.read?400:600};color:var(--dark)">${n.msg}</div>
+        <div class="ts" style="margin-top:3px">${fmt(n.ts)}</div>
+      </div>`).join('')
+    :'<div class="empty" style="padding:20px">No notifications.</div>';
+}
+function readNotif(id, taskId){
+  const n=notifications.find(x=>x.id===id); if(n) n.read=true;
+  saveData('notifs', notifications);
+  updateNotifBadge();
+  document.getElementById('notifPanel').style.display='none';
+  if(taskId) showNav('tasks');
+}
+function markAllRead(){ notifications.filter(n=>n.to===currentUser).forEach(n=>n.read=true); saveData('notifs',notifications); updateNotifBadge(); renderNotifPanel(); }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// VISIBILITY RULES
+// ══════════════════════════════════════════════════════════════════════════════
+function getVisibleTasks(){
+  if(isHOD()) return tasks;
+  if(!currentUser) return [];
+  return tasks.filter(t=>t.member===currentUser||t.assignedBy===currentUser);
+}
+function getVisibleSites(){
+  if(isHOD()) return sites;
+  if(!currentUser) return [];
+  return sites.filter(s=>s.engineer===currentUser||s.addedBy===currentUser);
+}
+function getVisiblePCBs(){
+  if(isHOD()) return pcbs;
+  if(!currentUser) return [];
+  return pcbs.filter(p=>p.person===currentUser||p.addedBy===currentUser);
+}
+function getVisibleLogs(){
+  if(isHOD()) return logs;
+  if(!currentUser) return [];
+  return logs.filter(l=>l.member===currentUser);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════════════════════════════════
+function showNav(page){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('panel-'+page).classList.add('active');
+  const ni=document.getElementById('nav-'+page); if(ni) ni.classList.add('active');
+  const titles={dashboard:'Dashboard',tasks:'Task Manager',sites:'Site Monitoring',pcb:'PCB Connectivity',productivity:'Productivity',hod:'HOD Audit Panel',config:'Configuration'};
+  document.getElementById('topTitle').textContent=titles[page]||page;
+  document.getElementById('sheetsBtnTop').style.display=isHOD()?'':'none';
+  document.getElementById('syncAllBtnTop').style.display=(isHOD()&&gsConfig.url)?'':'none';
+  if(page==='tasks')     { renderTasks(); renderTaskMetrics(); updateTaskPanelLabels(); }
+  if(page==='sites')     { renderSites(); renderSiteMetrics(); updateSitePanelLabels(); }
+  if(page==='pcb')       { renderPCB(); document.getElementById('pcbPanelSub').textContent=isHOD()?'Full team view.':'Your PCB entries.'; }
+  if(page==='productivity') renderProd();
+  if(page==='hod')       refreshHOD();
+  if(page==='dashboard') refreshDash();
+  if(page==='config')    { renderLists(); refreshNotifStatus(); applyHODVisibility(); }
+}
+function updateTaskPanelLabels(){
+  document.getElementById('taskPanelSub').textContent=isHOD()?'Full team view — all tasks visible.':'Tasks assigned to or by you.';
+  document.getElementById('f_member').style.display=isHOD()?'':'none';
+}
+function updateSitePanelLabels(){
+  document.getElementById('sitePanelSub').textContent=isHOD()?'Full team view.':'Your assigned sites.';
+  document.getElementById('f_siteEng').style.display=isHOD()?'':'none';
+}
+function requestHOD(){
+  if(hodUnlocked||currentUser===HOD_NAME){ showNav('hod'); return; }
+  document.getElementById('hodLock').style.display='flex';
+  document.getElementById('hodPwdInput').value='';
+  document.getElementById('hodPwdError').style.display='none';
+  setTimeout(()=>document.getElementById('hodPwdInput').focus(),100);
+}
+function verifyHOD(){
+  if(document.getElementById('hodPwdInput').value===hodPassword){
+    hodUnlocked=true;
+    document.getElementById('hodLock').style.display='none';
+    applyHODVisibility();
+    showNav('hod');
+    logActivity('HOD Unlocked','HOD panel accessed');
+  } else {
+    document.getElementById('hodPwdError').style.display='block';
+    document.getElementById('hodPwdInput').value='';
+  }
+}
+function cancelHOD(){ document.getElementById('hodLock').style.display='none'; }
+function lockHOD(){
+  if(currentUser!==HOD_NAME) hodUnlocked=false;
+  applyHODVisibility();
+  showNav('dashboard');
+}
+function openModal(id){ document.getElementById(id).style.display='flex'; }
+function closeModal(id){ document.getElementById(id).style.display='none'; }
+function switchTab(tab, btn){
+  activeTaskTab=tab;
+  document.querySelectorAll('#panel-tasks .tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTasks();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// POPULATE SELECTS
+// ══════════════════════════════════════════════════════════════════════════════
+function populateAllSelects(){
+  const memberSelects=['t_member','f_member','f_prodMember','s_eng','p_person','ra_member','mis_member','pm_person','hod_f_member','hod_act_member'];
+  memberSelects.forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    const val=el.value;
+    const blank=['f_member','f_prodMember','mis_member','hod_f_member','hod_act_member'].includes(id)?'All Members':'-- Select --';
+    el.innerHTML=`<option value="">${blank}</option>`;
+    FIXED_MEMBERS.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; el.appendChild(o); });
+    el.value=val;
+  });
+  const rcaSelects=['t_rca','s_rca','sr_rca','ct_rca'];
+  rcaSelects.forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    const val=el.value;
+    el.innerHTML='<option value="">-- RCA --</option>';
+    lists.rcas.forEach(r=>{ const o=document.createElement('option'); o.value=r; o.textContent=r; el.appendChild(o); });
+    el.value=val;
+  });
+  ['ql_issue','t_issue'].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    const val=el.value;
+    el.innerHTML='<option value="">-- Issue --</option>';
+    lists.issues.forEach(i=>{ const o=document.createElement('option'); o.value=i; o.textContent=i; el.appendChild(o); });
+    el.value=val;
+  });
+  const fe=document.getElementById('f_siteEng');
+  if(fe){ const v=fe.value; fe.innerHTML='<option value="">All Engineers</option>'; FIXED_MEMBERS.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;fe.appendChild(o);}); fe.value=v; }
+  document.getElementById('siteCountLabel').textContent=`${lists.sites.length} Sites Loaded`;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// AUTOCOMPLETE
+// ══════════════════════════════════════════════════════════════════════════════
+const AC_IDS=['ql_site','t_site','s_site','p_site','pm_site'];
+let _acFocusIdx={};
+
+function acInput(id, query){
+  const drop=document.getElementById(id+'_drop'); if(!drop) return;
+  const q=query.trim().toLowerCase();
+  if(q.length<2){ drop.innerHTML='<div class="ac-hint">Type at least 2 characters to search…</div>'; drop.classList.add('open'); _acFocusIdx[id]=-1; return; }
+  const matches=lists.sites.filter(s=>s.toLowerCase().includes(q)).slice(0,50);
+  if(!matches.length){ drop.innerHTML=`<div class="ac-hint">No sites found for "${query}"</div>`; drop.classList.add('open'); return; }
+  drop.innerHTML=matches.map((s,i)=>{
+    const hi=s.replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'),'<mark>$1</mark>');
+    return `<div class="ac-item" data-val="${s.replace(/"/g,'&quot;')}" onmousedown="acPick('${id}','${s.replace(/'/g,'\\\'')}')">${hi}</div>`;
+  }).join('');
+  drop.classList.add('open');
+  _acFocusIdx[id]=-1;
+}
+function acPick(id, val){
+  document.getElementById(id).value=val;
+  const txt=document.getElementById(id+'_text'); if(txt) txt.value=val;
+  const drop=document.getElementById(id+'_drop'); if(drop){ drop.innerHTML=''; drop.classList.remove('open'); }
+}
+function acClear(id){
+  document.getElementById(id).value='';
+  const txt=document.getElementById(id+'_text'); if(txt) txt.value='';
+  const drop=document.getElementById(id+'_drop'); if(drop){ drop.innerHTML=''; drop.classList.remove('open'); }
+}
+function acKey(e,id){
+  const drop=document.getElementById(id+'_drop'); if(!drop||!drop.classList.contains('open')) return;
+  const items=drop.querySelectorAll('.ac-item'); if(!items.length) return;
+  let idx=_acFocusIdx[id]||0;
+  if(e.key==='ArrowDown'){ e.preventDefault(); idx=Math.min(idx+1,items.length-1); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); idx=Math.max(idx-1,0); }
+  else if(e.key==='Enter'){ e.preventDefault(); if(idx>=0&&items[idx]) acPick(id,items[idx].dataset.val); return; }
+  else if(e.key==='Escape'){ drop.classList.remove('open'); return; }
+  _acFocusIdx[id]=idx;
+  items.forEach((el,i)=>el.classList.toggle('focused',i===idx));
+  if(items[idx]) items[idx].scrollIntoView({block:'nearest'});
+}
+function setACVal(id,val){
+  const h=document.getElementById(id); if(h) h.value=val||'';
+  const t=document.getElementById(id+'_text'); if(t) t.value=val||'';
+  const d=document.getElementById(id+'_drop'); if(d){ d.innerHTML=''; d.classList.remove('open'); }
+}
+function getACVal(id){ const el=document.getElementById(id); return el?el.value:''; }
+
+document.addEventListener('click',e=>{
+  AC_IDS.forEach(id=>{
+    const wrap=document.getElementById(id+'_text')?.closest('.ac-wrap');
+    const drop=document.getElementById(id+'_drop');
+    if(drop&&!wrap?.contains(e.target)) drop.classList.remove('open');
+  });
+  if(!e.target.closest('#notifBell')&&!e.target.closest('#notifPanel'))
+    document.getElementById('notifPanel').style.display='none';
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TASK MODAL
+// ══════════════════════════════════════════════════════════════════════════════
+function setTaskType(type){
+  document.getElementById('ttSite').classList.toggle('active',type==='site');
+  document.getElementById('ttOwn').classList.toggle('active',type==='own');
+  document.querySelectorAll('.t_site_field').forEach(el=>el.style.display=type==='site'?'':'none');
+}
+function resetTaskModal(){
+  document.getElementById('taskModalTitle').textContent='Assign / Add Task';
+  document.getElementById('t_assignedByDisplay').textContent=currentUser||'—';
+  ['t_member','t_issue','t_rca'].forEach(id=>{ const el=document.getElementById(id); if(el) el.selectedIndex=0; });
+  setACVal('t_site','');
+  document.getElementById('t_priority').value='P2';
+  document.getElementById('t_status').value='Open';
+  document.getElementById('t_issuecat').value='Software';
+  document.getElementById('t_detail').value='';
+  document.getElementById('t_remark').value='';
+  delete document.getElementById('taskModal').dataset.editId;
+  setTaskType('site');
+  document.getElementById('t_member').value=currentUser;
+}
+function saveTask(){
+  const assignedBy=currentUser;
+  const member=document.getElementById('t_member').value;
+  const issue =document.getElementById('t_issue').value;
+  if(!member||!issue){ alert('Please fill Assigned To and Issue Type.'); return; }
+  const isOwnTask=document.getElementById('ttOwn').classList.contains('active');
+  const site=isOwnTask?'(Own Task)':getACVal('t_site');
+  const editId=document.getElementById('taskModal').dataset.editId;
+
+  const taskData={
+    assignedBy, member, site, issue,
+    issuecat : document.getElementById('t_issuecat').value,
+    priority : document.getElementById('t_priority').value,
+    status   : document.getElementById('t_status').value,
+    rca      : document.getElementById('t_rca').value,
+    detail   : document.getElementById('t_detail').value,
+    remark   : document.getElementById('t_remark').value,
+    isOwnTask
+  };
+
+  if(editId){
+    const idx=tasks.findIndex(t=>String(t.id)===String(editId));
+    if(idx>-1){
+      const old=tasks[idx];
+      tasks[idx]={...old,...taskData,updatedAt:now()};
+      if(taskData.status==='Closed'&&old.status!=='Closed') tasks[idx].closedAt=now();
+      tasks[idx].points=pts(tasks[idx]);
+      saveData('tasks',tasks);
+      syncToGSNow('Tasks',[tasks[idx].id,fmt(tasks[idx].ts),assignedBy,member,tasks[idx].site,issue,tasks[idx].issuecat,tasks[idx].priority,tasks[idx].status,tasks[idx].rca||'',tasks[idx].remark||'',closureTime(tasks[idx]),(tasks[idx].reassignChain||[]).length,'[EDITED]']);
+      logActivity('Task Edited',`Task #${tasks[idx].id} — ${issue} @ ${site} → Status: ${tasks[idx].status}`,tasks[idx].id);
+    }
+  } else {
+    const task={ id:uid(), ts:now(), reassignChain:[], ...taskData, points:0 };
+    task.points=pts(task);
+    tasks.unshift(task);
+    saveData('tasks',tasks);
+    syncToGSNow('Tasks',[task.id,fmt(task.ts),assignedBy,member,task.site,issue,task.issuecat,task.priority,task.status,task.rca||'',task.remark||'','-',0,isOwnTask?'Own Task':'Site Task']);
+    addLog({type:'task',member,site:task.site,issue,priority:task.priority,status:task.status,remark:task.remark||'',ts:now(),points:task.points});
+    logActivity('Task Created',`${assignedBy} → ${member}: ${issue} @ ${site} [${task.priority}]`,task.id);
+    if(member!==assignedBy) addNotification(member,`📋 New task from ${assignedBy}: ${issue}${site&&site!=='(Own Task)'?' — '+site:''}`,task.id);
+    // Notify HOD if task assigned to/by someone else
+    if(member!==HOD_NAME&&assignedBy!==HOD_NAME) addNotification(HOD_NAME,`📋 New task: ${assignedBy}→${member}: ${issue}`,task.id);
+  }
+
+  closeModal('taskModal');
+  renderTasks(); renderTaskMetrics(); refreshDash(); updateNotifBadge();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// REASSIGN — fixed and robust
+// ══════════════════════════════════════════════════════════════════════════════
+function openReassign(id){
+  const t=tasks.find(x=>String(x.id)===String(id)); if(!t) return;
+  document.getElementById('ra_taskId').value=t.id;
+  document.getElementById('ra_remark').value='';
+  document.getElementById('reassignTaskInfo').innerHTML=`
+    <b>Task ID:</b> #${t.id}<br>
+    <b>Issue:</b> ${t.issue}<br>
+    <b>Site:</b> ${t.site||'(Own Task)'}<br>
+    <b>Currently assigned to:</b> <strong>${t.member}</strong><br>
+    <b>Originally assigned by:</b> ${t.assignedBy||'—'}<br>
+    <b>Priority:</b> ${t.priority} &nbsp; <b>Status:</b> ${t.status}`;
+  populateAllSelects();
+  document.getElementById('ra_member').value='';
+  openModal('reassignModal');
+}
+function doReassign(){
+  const id=document.getElementById('ra_taskId').value;
+  const newMember=document.getElementById('ra_member').value;
+  const remark=document.getElementById('ra_remark').value.trim();
+  if(!newMember){ alert('Please select a member to reassign to.'); return; }
+  if(!remark){ alert('Please provide a reason for reassignment.'); return; }
+
+  const idx=tasks.findIndex(x=>String(x.id)===String(id));
+  if(idx===-1){ alert('Task not found.'); return; }
+  const t=tasks[idx];
+  const prevMember=t.member;
+
+  if(!t.reassignChain) t.reassignChain=[];
+  t.reassignChain.push({ from:prevMember, to:newMember, by:currentUser, ts:now(), remark });
+  t.member=newMember;
+  t.status=t.status==='Closed'?'Open':t.status;
+  t.updatedAt=now();
+
+  saveData('tasks',tasks);
+
+  // Notify new assignee
+  addNotification(newMember,`🔄 Task reassigned to you by ${currentUser}: ${t.issue}${t.site&&t.site!=='(Own Task)'?' — '+t.site:''}`,t.id);
+  // Notify original assigner if different
+  if(t.assignedBy&&t.assignedBy!==currentUser&&t.assignedBy!==newMember)
+    addNotification(t.assignedBy,`🔄 Your task was reassigned by ${currentUser}: ${t.issue} → ${newMember}`,t.id);
+  // Always notify HOD
+  if(currentUser!==HOD_NAME)
+    addNotification(HOD_NAME,`🔄 Reassignment: ${prevMember}→${newMember} by ${currentUser}: ${t.issue}`,t.id);
+
+  logActivity('Task Reassigned',`${prevMember}→${newMember} by ${currentUser}: ${t.issue}. Reason: ${remark}`,t.id);
+  syncToGSNow('Reassignments',[t.id,fmt(now()),prevMember,newMember,currentUser,t.issue,t.site||'',remark]);
+
+  closeModal('reassignModal');
+  renderTasks(); renderTaskMetrics(); updateNotifBadge();
+  showInAppToast('✅ Reassigned',`Task reassigned to ${newMember}.`);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CLOSE TASK
+// ══════════════════════════════════════════════════════════════════════════════
+function openCloseTask(id){
+  const t=tasks.find(x=>String(x.id)===String(id)); if(!t) return;
+  document.getElementById('ct_taskId').value=t.id;
+  document.getElementById('ct_remark').value=t.remark||'';
+  document.getElementById('ct_rca').value=t.rca||'';
+  document.getElementById('closeTaskInfo').innerHTML=`
+    <b>Issue:</b> ${t.issue}<br>
+    <b>Site:</b> ${t.site||'(Own Task)'}<br>
+    <b>Assigned By:</b> ${t.assignedBy||'—'} &nbsp; <b>Assigned To:</b> ${t.member}`;
+  populateAllSelects();
+  openModal('closeTaskModal');
+}
+function doCloseTask(){
+  const id=document.getElementById('ct_taskId').value;
+  const idx=tasks.findIndex(x=>String(x.id)===String(id));
+  if(idx===-1) return;
+  const t=tasks[idx];
+  t.remark=document.getElementById('ct_remark').value||t.remark;
+  t.rca   =document.getElementById('ct_rca').value||t.rca;
+  t.status='Closed'; t.closedAt=now(); t.points=pts(t);
+  saveData('tasks',tasks);
+
+  if(t.assignedBy&&t.assignedBy!==t.member)
+    addNotification(t.assignedBy,`✅ Task closed by ${t.member}: ${t.issue} (${closureTime(t)})`,t.id);
+  if(t.assignedBy!==HOD_NAME&&t.member!==HOD_NAME)
+    addNotification(HOD_NAME,`✅ Task closed: ${t.member} closed "${t.issue}" in ${closureTime(t)}`,t.id);
+
+  logActivity('Task Closed',`${currentUser} closed: ${t.issue} @ ${t.site||'(Own Task)'}. Time: ${closureTime(t)}. RCA: ${t.rca||'N/A'}`,t.id);
+  syncToGSNow('Tasks',[t.id,fmt(t.ts),t.assignedBy,t.member,t.site,t.issue,t.issuecat,t.priority,'Closed',t.rca||'',t.remark||'',closureTime(t),(t.reassignChain||[]).length,'[CLOSED]']);
+  addLog({type:'close',member:currentUser,site:t.site,issue:t.issue,priority:t.priority,status:'Closed',remark:t.remark||'Closed',ts:now(),points:t.points});
+
+  closeModal('closeTaskModal');
+  renderTasks(); renderTaskMetrics(); refreshDash(); updateNotifBadge();
+  showInAppToast('✅ Task Closed',`${t.issue} marked as closed.`);
+}
+
+function editTask(id){
+  const t=tasks.find(x=>String(x.id)===String(id)); if(!t) return;
+  document.getElementById('taskModalTitle').textContent='Edit Task';
+  document.getElementById('t_assignedByDisplay').textContent=t.assignedBy||currentUser;
+  document.getElementById('t_member').value=t.member;
+  setACVal('t_site',t.isOwnTask?'':t.site);
+  document.getElementById('t_issue').value=t.issue;
+  document.getElementById('t_issuecat').value=t.issuecat||'Software';
+  document.getElementById('t_priority').value=t.priority;
+  document.getElementById('t_status').value=t.status;
+  document.getElementById('t_rca').value=t.rca||'';
+  document.getElementById('t_detail').value=t.detail||'';
+  document.getElementById('t_remark').value=t.remark||'';
+  document.getElementById('taskModal').dataset.editId=t.id;
+  setTaskType(t.isOwnTask?'own':'site');
+  openModal('taskModal');
+}
+function deleteTask(id){
+  if(!isHOD()){ alert('Only HOD can delete tasks.'); return; }
+  if(!confirm('Delete this task permanently? This will also remove it from Google Sheets.')) return;
+  tasks=tasks.filter(x=>String(x.id)!==String(id));
+  saveData('tasks',tasks);
+  deleteFromGS('Tasks',id);
+  logActivity('Task Deleted',`HOD deleted task #${id}`);
+  renderTasks(); renderTaskMetrics(); updateNotifBadge();
+  showInAppToast('🗑 Deleted','Task removed.');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// RENDER TASKS
+// ══════════════════════════════════════════════════════════════════════════════
+function renderTasks(){
+  const fS=(document.getElementById('f_status')?.value)||'';
+  const fP=(document.getElementById('f_priority')?.value)||'';
+  const fM=isHOD()?(document.getElementById('f_member')?.value||''):'';
+  const fQ=((document.getElementById('f_search')?.value)||'').toLowerCase();
+
+  let filtered=getVisibleTasks()
+    .filter(t=>(!fS||t.status===fS)&&(!fP||t.priority===fP)&&(!fM||t.member===fM)&&(!fQ||[t.site,t.issue,t.member,t.assignedBy].join(' ').toLowerCase().includes(fQ)));
+
+  if(activeTaskTab==='mine')     filtered=filtered.filter(t=>t.member===currentUser);
+  else if(activeTaskTab==='assigned') filtered=filtered.filter(t=>t.assignedBy===currentUser&&t.member!==currentUser);
+  else if(activeTaskTab==='own') filtered=filtered.filter(t=>t.isOwnTask&&t.member===currentUser);
+
+  const tbody=document.getElementById('taskBody'); tbody.innerHTML='';
+  document.getElementById('taskEmpty').style.display=filtered.length?'none':'block';
+
+  filtered.forEach((t,i)=>{
+    const chain=t.reassignChain||[];
+    const canClose=t.status!=='Closed'&&(t.member===currentUser||t.assignedBy===currentUser||isHOD());
+    const canReassign=t.status!=='Closed'&&(t.member===currentUser||isHOD());
+    const canEdit=t.assignedBy===currentUser||t.member===currentUser||isHOD();
+    const tr=document.createElement('tr'); tr.className=agingClass(t.ts,t.status);
+    tr.innerHTML=`
+      <td class="ts">${i+1}</td>
+      <td class="ts">${fmt(t.ts)}</td>
+      <td><div style="display:flex;align-items:center;gap:5px"><div class="avatar" style="width:22px;height:22px;font-size:9px;background:${avatarColor(t.assignedBy)}">${initials(t.assignedBy)}</div>${t.assignedBy||'-'}</div></td>
+      <td><div style="display:flex;align-items:center;gap:5px"><div class="avatar" style="width:22px;height:22px;font-size:9px;background:${avatarColor(t.member)}">${initials(t.member)}</div>${t.member||'-'}</div></td>
+      <td style="font-size:11px;max-width:90px;white-space:normal">${t.site||'-'}</td>
+      <td style="font-size:11px">${t.issue||'-'}</td>
+      <td>${catBadge(t.issuecat)}</td>
+      <td>${pBadge(t.priority)}</td>
+      <td>${sBadge(t.status)}</td>
+      <td>${agingStr(t.ts,t.status)}${t.status==='Closed'?`<br><span class="ts">⏱ ${closureTime(t)}</span>`:''}</td>
+      <td>${slaStatus(t.ts,t.priority,t.status)}</td>
+      <td>${chain.length?`<span class="badge badge-purple">${chain.length}×</span><div style="font-size:10px;color:var(--mid);margin-top:2px">${chain.map(c=>`${c.from}→${c.to}`).join(', ')}</div>`:'<span class="ts">—</span>'}</td>
+      <td style="font-size:10px">${t.rca||'—'}</td>
+      <td style="font-size:10px;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(t.remark||'').replace(/"/g,'&quot;')}">${t.remark||'—'}</td>
+      <td><div style="display:flex;gap:3px;flex-wrap:wrap">
+        ${canClose?`<button class="btn btn-primary btn-sm" onclick="openCloseTask(${t.id})">Close</button>`:''}
+        ${canReassign?`<button class="btn btn-purple btn-sm" onclick="openReassign(${t.id})">Reassign</button>`:''}
+        ${canEdit?`<button class="btn btn-ghost btn-sm" onclick="editTask(${t.id})">Edit</button>`:''}
+        ${isHOD()?`<button class="btn btn-danger btn-sm" onclick="deleteTask(${t.id})">Del</button>`:''}
+      </div></td>`;
+    tbody.appendChild(tr);
+  });
+}
+function renderTaskMetrics(){
+  const base=getVisibleTasks();
+  const total=base.length,open=base.filter(t=>t.status==='Open').length,
+    inprog=base.filter(t=>t.status==='In Progress').length,
+    closed=base.filter(t=>t.status==='Closed').length,
+    p1=base.filter(t=>t.priority==='P1'&&t.status!=='Closed').length,
+    esc=base.filter(t=>t.status==='Escalated').length;
+  document.getElementById('taskMetrics').innerHTML=`
+    <div class="metric blue"><div class="metric-val">${total}</div><div class="metric-lbl">Total Tasks</div></div>
+    <div class="metric ${open+inprog>0?'amber':'green'}"><div class="metric-val">${open+inprog}</div><div class="metric-lbl">Open / In Progress</div></div>
+    <div class="metric green"><div class="metric-val">${closed}</div><div class="metric-lbl">Closed</div></div>
+    <div class="metric ${p1>0?'red':'green'}"><div class="metric-val">${p1}</div><div class="metric-lbl">P1 Open</div></div>
+    <div class="metric ${esc>0?'red':'green'}"><div class="metric-val">${esc}</div><div class="metric-lbl">Escalated</div></div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// QUICK LOG
+// ══════════════════════════════════════════════════════════════════════════════
+function quickLog(){
+  const member=currentUser; if(!member){alert('Not logged in.');return;}
+  const site  =getACVal('ql_site')||'(No site)';
+  const issue =document.getElementById('ql_issue').value;
+  const remark=document.getElementById('ql_remark').value.trim();
+  const priority=document.getElementById('ql_priority').value;
+  if(!issue){alert('Please select Issue Type.');return;}
+
+  const task={id:uid(),ts:now(),assignedBy:member,member,site,issue,issuecat:'Other',priority,status:'Open',rca:'',detail:'',remark,points:0,isOwnTask:!getACVal('ql_site'),reassignChain:[]};
+  task.points=pts(task);
+  tasks.unshift(task);
+  saveData('tasks',tasks);
+  syncToGSNow('Tasks',[task.id,fmt(task.ts),member,member,site,issue,'Other',priority,'Open','',remark,'-',0,'QuickLog']);
+  addLog({type:'quicklog',member,site,issue,priority,status:'Open',remark,ts:now(),points:task.points});
+  logActivity('Quick Log',`${member}: ${issue} @ ${site}`,task.id);
+
+  acClear('ql_site');
+  document.getElementById('ql_remark').value='';
+  const ok=document.getElementById('qlSuccess'); ok.style.display='flex'; setTimeout(()=>ok.style.display='none',3500);
+  refreshDash(); updateNotifBadge();
+}
+
+function addLog(entry){
+  logs.unshift(entry);
+  if(logs.length>1000) logs=logs.slice(0,1000);
+  saveData('logs',logs);
+  syncToGSNow('WorkLogs',[fmt(entry.ts),entry.member||'',entry.site||'',entry.issue||'',entry.priority||'',entry.status||'',entry.points||0,entry.remark||'',entry.type||'log']);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PRODUCTIVITY
+// ══════════════════════════════════════════════════════════════════════════════
+function renderProd(){
+  const fM=isHOD()?(document.getElementById('f_prodMember')?.value||''):'';
+  const fD=(document.getElementById('f_prodDate')?.value)||'';
+  document.getElementById('f_prodMember').style.display=isHOD()?'':'none';
+  document.getElementById('prodPanelSub').textContent=isHOD()?'Full team productivity.':'Your personal performance.';
+  document.getElementById('prodLogSub').textContent=isHOD()?'All team activity':'Your activity logs';
+
+  const baseLogs=getVisibleLogs();
+  const filtered=baseLogs.filter(l=>(!fM||l.member===fM)&&(!fD||l.ts?.startsWith(fD)));
+
+  const tbody=document.getElementById('prodBody'); tbody.innerHTML='';
+  document.getElementById('prodEmpty').style.display=filtered.length?'none':'block';
+  filtered.forEach(l=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td class="ts">${fmt(l.ts)}</td>
+      <td><div style="display:flex;align-items:center;gap:5px"><div class="avatar" style="width:22px;height:22px;font-size:9px;background:${avatarColor(l.member)}">${initials(l.member)}</div>${l.member}</div></td>
+      <td style="font-size:11px">${l.site||'—'}</td>
+      <td style="font-size:11px">${l.issue||'—'}</td>
+      <td>${pBadge(l.priority)}</td>
+      <td>${sBadge(l.status)}</td>
+      <td><b style="color:var(--g500)">+${l.points||0}</b></td>
+      <td style="font-size:11px">${l.remark||'—'}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  const membersToShow=isHOD()?FIXED_MEMBERS:[currentUser].filter(Boolean);
+  const scored={};
+  membersToShow.forEach(m=>scored[m]={name:m,pts:0,tasks:0,closed:0});
+  logs.filter(l=>membersToShow.includes(l.member)).forEach(l=>{ if(scored[l.member]){ scored[l.member].pts+=l.points||0; scored[l.member].tasks++; } });
+  tasks.filter(t=>membersToShow.includes(t.member)&&t.status==='Closed').forEach(t=>{ if(scored[t.member]) scored[t.member].closed++; });
+  const all=Object.values(scored).sort((a,b)=>b.pts-a.pts);
+  const max=Math.max(...all.map(a=>a.pts),1);
+  document.getElementById('prodCards').innerHTML=all.map(a=>`
+    <div class="prod-card">
+      <div class="prod-avatar" style="background:${avatarColor(a.name)}">${initials(a.name)}</div>
+      <div style="flex:1;min-width:0">
+        <div class="prod-name">${a.name}</div>
+        <div class="prod-score">${a.tasks} logs · ${a.pts} pts · ${a.closed} closed</div>
+        <div class="prod-bar-wrap"><div class="prod-bar" style="width:${Math.round(a.pts/max*100)}%"></div></div>
+      </div>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SITES
+// ══════════════════════════════════════════════════════════════════════════════
+function addSite(){
+  const site    =getACVal('s_site');
+  const engineer=document.getElementById('s_eng').value;
+  if(!site){alert('Please select a site.');return;}
+  const d={id:uid(),ts:now(),site,status:document.getElementById('s_status').value,
+    offlineHrs:parseInt(document.getElementById('s_offline').value)||0,
+    engineer,action:document.getElementById('s_action').value,addedBy:currentUser,
+    accessible:'',rca:'',visitRequired:'',responseRemark:'',closedAt:null,closedBy:null};
+  sites.unshift(d);
+  saveData('sites',sites);
+  if(engineer&&engineer!==currentUser) addNotification(engineer,`🗺️ Site assigned to you: ${site} — ${d.status}`,null);
+  if(currentUser!==HOD_NAME) addNotification(HOD_NAME,`🗺️ ${currentUser} logged site: ${site} — ${d.status}`,null);
+  syncToGSNow('Sites',[d.id,fmt(d.ts),d.site,d.status,d.offlineHrs,engineer||'',d.action||'',currentUser,'','','','','Open']);
+  addLog({type:'site',member:currentUser,site:d.site,issue:'Site '+d.status,priority:'P2',status:'Open',remark:d.action||'',ts:now(),points:2});
+  logActivity('Site Logged',`${currentUser}: ${site} — ${d.status}`,d.id);
+  renderSites(); renderSiteMetrics();
+  document.getElementById('s_offline').value=''; document.getElementById('s_action').value=''; acClear('s_site');
+}
+function openSiteResponse(id){
+  const s=sites.find(x=>String(x.id)===String(id)); if(!s) return;
+  document.getElementById('sr_siteId').value=s.id;
+  document.getElementById('sr_accessible').value=s.accessible||'Yes';
+  document.getElementById('sr_status').value=s.status||'Offline';
+  document.getElementById('sr_rca').value=s.rca||'';
+  document.getElementById('sr_visit').value=s.visitRequired||'No';
+  document.getElementById('sr_remark').value=s.responseRemark||'';
+  document.getElementById('siteRespInfo').innerHTML=`<b>Site:</b> ${s.site} &nbsp; <b>Engineer:</b> ${s.engineer||'—'}`;
+  populateAllSelects();
+  openModal('siteResponseModal');
+}
+function submitSiteResponse(){
+  const id=document.getElementById('sr_siteId').value;
+  const idx=sites.findIndex(x=>String(x.id)===String(id)); if(idx===-1) return;
+  const s=sites[idx];
+  s.accessible=document.getElementById('sr_accessible').value;
+  s.status    =document.getElementById('sr_status').value;
+  s.rca       =document.getElementById('sr_rca').value;
+  s.visitRequired=document.getElementById('sr_visit').value;
+  s.responseRemark=document.getElementById('sr_remark').value;
+  s.respondedBy=currentUser; s.respondedAt=now();
+  saveData('sites',sites);
+  if(s.addedBy&&s.addedBy!==currentUser) addNotification(s.addedBy,`📍 ${currentUser} responded on ${s.site}: Accessible=${s.accessible}, Status=${s.status}`,null);
+  if(currentUser!==HOD_NAME) addNotification(HOD_NAME,`📍 ${currentUser} updated site ${s.site}: ${s.status}`,null);
+  logActivity('Site Response',`${currentUser} updated ${s.site}: ${s.status}, Accessible: ${s.accessible}`,s.id);
+  syncToGSNow('Sites',[s.id,fmt(s.ts),s.site,s.status,s.offlineHrs,s.engineer||'',s.action||'',s.addedBy||'',s.accessible,s.rca,s.visitRequired,s.responseRemark,'Open']);
+  addLog({type:'site_response',member:currentUser,site:s.site,issue:'Site Response: '+s.status,priority:'P2',status:'In Progress',remark:s.responseRemark||'',ts:now(),points:3});
+  closeModal('siteResponseModal'); renderSites();
+}
+function closeSiteEntry(id){
+  const idx=sites.findIndex(x=>String(x.id)===String(id)); if(idx===-1) return;
+  const s=sites[idx];
+  s.closedAt=now(); s.closedBy=currentUser;
+  saveData('sites',sites);
+  logActivity('Site Closed',`${currentUser} closed site: ${s.site}`,s.id);
+  syncToGSNow('Sites',[s.id,fmt(s.ts),s.site,s.status,s.offlineHrs,s.engineer||'',s.action||'',s.addedBy||'',s.accessible||'',s.rca||'',s.visitRequired||'',s.responseRemark||'','Closed by '+currentUser]);
+  addLog({type:'site_close',member:currentUser,site:s.site,issue:'Site Closed',priority:'P2',status:'Closed',remark:'Site entry closed',ts:now(),points:5});
+  renderSites();
+}
+function deleteSite(id){
+  if(!isHOD()){alert('Only HOD can delete site entries.');return;}
+  if(!confirm('Delete this site entry? This also removes it from Google Sheets.')) return;
+  sites=sites.filter(x=>String(x.id)!==String(id));
+  saveData('sites',sites);
+  deleteFromGS('Sites',id);
+  logActivity('Site Deleted',`HOD deleted site entry #${id}`);
+  renderSites(); renderSiteMetrics();
+}
+function renderSites(){
+  const vs=getVisibleSites();
+  const f =(document.getElementById('f_siteStatus')?.value)||'';
+  const fe=isHOD()?(document.getElementById('f_siteEng')?.value||''):'';
+  const fs=((document.getElementById('f_siteSearch')?.value)||'').toLowerCase();
+  const filtered=vs.filter(s=>(!f||s.status===f)&&(!fe||s.engineer===fe)&&(!fs||s.site.toLowerCase().includes(fs)));
+  const tbody=document.getElementById('siteBody'); tbody.innerHTML='';
+  document.getElementById('siteEmpty').style.display=filtered.length?'none':'block';
+  filtered.forEach((s,i)=>{
+    const h=parseInt(s.offlineHrs)||0; const isClosed=!!s.closedAt;
+    const tr=document.createElement('tr'); tr.className=isClosed?'':(h>=72?'aging-crit':h>=48?'aging-warn':'');
+    const canRespond=(s.engineer===currentUser||isHOD())&&!isClosed;
+    const canClose=(s.respondedBy||isHOD())&&!isClosed;
+    tr.innerHTML=`
+      <td class="ts">${i+1}</td><td class="ts">${fmt(s.ts)}</td>
+      <td style="font-size:11px;font-weight:500">${s.site}</td>
+      <td>${stBadge(s.status)}</td>
+      <td class="${h>=72?'aging-crit-txt':h>=48?'aging-warn-txt':''}"><b>${h}h</b></td>
+      <td>${isClosed?'<span class="aging-val aging-ok-txt">Closed</span>':agingStr(s.ts,'Open')}</td>
+      <td>${s.engineer||'—'}</td>
+      <td>${s.accessible?`<span class="badge badge-${s.accessible==='Yes'?'green':'red'}">${s.accessible}</span>`:'<span class="badge badge-gray">Pending</span>'}</td>
+      <td style="font-size:10px">${s.rca||'—'}</td>
+      <td>${s.visitRequired?`<span class="badge badge-${s.visitRequired==='Yes'?'amber':'gray'}">${s.visitRequired}</span>`:'—'}</td>
+      <td style="font-size:10px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(s.responseRemark||s.action||'').replace(/"/g,'&quot;')}">${s.responseRemark||s.action||'—'}</td>
+      <td><div style="display:flex;gap:3px;flex-wrap:wrap">
+        ${canRespond?`<button class="btn btn-blue btn-sm" onclick="openSiteResponse(${s.id})">Update</button>`:''}
+        ${canClose?`<button class="btn btn-primary btn-sm" onclick="closeSiteEntry(${s.id})">Close</button>`:''}
+        ${isHOD()?`<button class="btn btn-danger btn-sm" onclick="deleteSite(${s.id})">Del</button>`:''}
+      </div></td>`;
+    tbody.appendChild(tr);
+  });
+}
+function renderSiteMetrics(){
+  const base=getVisibleSites();
+  const on=base.filter(s=>s.status==='Online').length,off=base.filter(s=>s.status==='Offline').length,
+    del=base.filter(s=>s.status==='Delay'||s.status==='Intermittent').length,
+    crit=base.filter(s=>s.offlineHrs>=72&&!s.closedAt).length,
+    open=base.filter(s=>!s.closedAt&&s.status!=='Online').length;
+  document.getElementById('siteMetrics').innerHTML=`
+    <div class="metric green"><div class="metric-val">${on}</div><div class="metric-lbl">Online</div></div>
+    <div class="metric red"><div class="metric-val">${off}</div><div class="metric-lbl">Offline</div></div>
+    <div class="metric amber"><div class="metric-val">${del}</div><div class="metric-lbl">Delay / Intermittent</div></div>
+    <div class="metric red"><div class="metric-val">${crit}</div><div class="metric-lbl">Critical 72h+</div></div>
+    <div class="metric amber"><div class="metric-val">${open}</div><div class="metric-lbl">Open / Unresolved</div></div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PCB
+// ══════════════════════════════════════════════════════════════════════════════
+function addPCB(){
+  const site  =getACVal('p_site');
+  const person=document.getElementById('p_person').value;
+  if(!site){alert('Please select a site.');return;}
+  const d={id:uid(),ts:now(),site,type:document.getElementById('p_type').value,
+    status:document.getElementById('p_status').value,person,
+    remark:document.getElementById('p_remark').value,addedBy:currentUser};
+  pcbs.unshift(d);
+  saveData('pcbs',pcbs);
+  if(person&&person!==currentUser) addNotification(person,`📡 PCB task assigned: ${site} — ${d.type}: ${d.status}`,null);
+  if(currentUser!==HOD_NAME) addNotification(HOD_NAME,`📡 ${currentUser} logged PCB: ${site} — ${d.type}: ${d.status}`,null);
+  syncToGSNow('PCB',[d.id,fmt(d.ts),d.site,d.type,d.status,person||'',d.remark||'',currentUser,'']);
+  addLog({type:'pcb',member:currentUser,site:d.site,issue:'PCB '+d.type+': '+d.status,priority:'P2',status:d.status==='Live'?'Closed':'Open',remark:d.remark||'',ts:now(),points:d.status==='Live'?5:2});
+  logActivity('PCB Logged',`${currentUser}: ${site} — ${d.type}: ${d.status}`,d.id);
+  renderPCB();
+  document.getElementById('p_remark').value=''; acClear('p_site');
+}
+function openEditPCB(id){
+  const p=pcbs.find(x=>String(x.id)===String(id)); if(!p) return;
+  document.getElementById('pm_pcbId').value=p.id;
+  document.getElementById('pm_type').value=p.type||'CPCB';
+  document.getElementById('pm_status').value=p.status||'Live';
+  document.getElementById('pm_remark').value=p.remark||'';
+  populateAllSelects();
+  setTimeout(()=>{ setACVal('pm_site',p.site||''); document.getElementById('pm_person').value=p.person||''; },10);
+  openModal('pcbModal');
+}
+function savePCBEdit(){
+  const id=document.getElementById('pm_pcbId').value;
+  const idx=pcbs.findIndex(x=>String(x.id)===String(id)); if(idx===-1) return;
+  const p=pcbs[idx];
+  p.site  =getACVal('pm_site')||p.site;
+  p.type  =document.getElementById('pm_type').value;
+  p.status=document.getElementById('pm_status').value;
+  p.person=document.getElementById('pm_person').value||p.person;
+  p.remark=document.getElementById('pm_remark').value;
+  p.updatedAt=now(); p.updatedBy=currentUser;
+  saveData('pcbs',pcbs);
+  logActivity('PCB Edited',`${currentUser} updated ${p.site} — ${p.type}: ${p.status}`,p.id);
+  syncToGSNow('PCB',[p.id,fmt(p.ts),p.site,p.type,p.status,p.person||'',p.remark||'',p.addedBy||'',fmt(p.updatedAt)]);
+  addLog({type:'pcb_edit',member:currentUser,site:p.site,issue:'PCB '+p.type+' updated: '+p.status,priority:'P2',status:p.status==='Live'?'Closed':'Open',remark:p.remark||'',ts:now(),points:2});
+  closeModal('pcbModal'); renderPCB();
+}
+function deletePCB(id){
+  if(!isHOD()){alert('Only HOD can delete PCB entries.');return;}
+  if(!confirm('Delete this PCB entry? Also removes from Google Sheets.')) return;
+  pcbs=pcbs.filter(x=>String(x.id)!==String(id));
+  saveData('pcbs',pcbs);
+  deleteFromGS('PCB',id);
+  logActivity('PCB Deleted',`HOD deleted PCB entry #${id}`);
+  renderPCB();
+}
+function renderPCB(){
+  const base=getVisiblePCBs();
+  const tbody=document.getElementById('pcbBody'); tbody.innerHTML='';
+  document.getElementById('pcbEmpty').style.display=base.length?'none':'block';
+  base.forEach((p,i)=>{
+    const canEdit=p.person===currentUser||p.addedBy===currentUser||isHOD();
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td class="ts">${i+1}</td><td class="ts">${fmt(p.ts)}</td>
+      <td style="font-size:11px;font-weight:500">${p.site}</td>
+      <td><b>${p.type}</b></td>
+      <td>${pcbBadge(p.status)}</td>
+      <td>${agingStr(p.ts,p.status==='Live'?'Closed':'Open')}</td>
+      <td>${p.person||'—'}</td>
+      <td style="font-size:11px">${p.remark||'—'}</td>
+      <td><div style="display:flex;gap:3px;flex-wrap:wrap">
+        ${canEdit?`<button class="btn btn-amber btn-sm" onclick="openEditPCB(${p.id})">✏ Edit</button>`:''}
+        ${isHOD()?`<button class="btn btn-danger btn-sm" onclick="deletePCB(${p.id})">Del</button>`:''}
+      </div></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// HOD AUDIT
+// ══════════════════════════════════════════════════════════════════════════════
+function refreshHOD(){
+  if(!isHOD()) return;
+  const el=document.getElementById('hodLastRefresh');
+  if(el) el.textContent='Full visibility — HOD access · Last refreshed: '+new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  populateAllSelects();
+
+  const total=tasks.length, open=tasks.filter(t=>t.status==='Open').length,
+    closed=tasks.filter(t=>t.status==='Closed').length,
+    p1=tasks.filter(t=>t.priority==='P1'&&t.status!=='Closed').length,
+    esc=tasks.filter(t=>t.status==='Escalated').length,
+    offSites=sites.filter(s=>s.status==='Offline'&&!s.closedAt).length,
+    livePCB=pcbs.filter(p=>p.status==='Live').length;
+
+  document.getElementById('hodMetrics').innerHTML=`
+    <div class="metric blue"><div class="metric-val">${total}</div><div class="metric-lbl">Total Tasks</div></div>
+    <div class="metric ${open>0?'amber':'green'}"><div class="metric-val">${open}</div><div class="metric-lbl">Open Tasks</div></div>
+    <div class="metric green"><div class="metric-val">${closed}</div><div class="metric-lbl">Closed</div></div>
+    <div class="metric ${p1>0?'red':'green'}"><div class="metric-val">${p1}</div><div class="metric-lbl">P1 Pending</div></div>
+    <div class="metric ${esc>0?'red':'green'}"><div class="metric-val">${esc}</div><div class="metric-lbl">Escalated</div></div>
+    <div class="metric ${offSites>0?'red':'green'}"><div class="metric-val">${offSites}</div><div class="metric-lbl">Offline Sites</div></div>
+    <div class="metric green"><div class="metric-val">${livePCB}/${pcbs.length}</div><div class="metric-lbl">PCB Live</div></div>
+    <div class="metric purple"><div class="metric-val">${activityLog.length}</div><div class="metric-lbl">Total Activities</div></div>`;
+
+  // Checklist
+  const checks=[
+    {label:'All sites checked today',ok:sites.filter(s=>s.ts?.startsWith(new Date().toISOString().split('T')[0])).length>0},
+    {label:'All P1 tickets acknowledged',ok:p1===0},
+    {label:'Offline 72h+ sites have RCA',ok:sites.filter(s=>s.offlineHrs>=72&&!s.rca&&!s.closedAt).length===0},
+    {label:'PCB connectivity updated',ok:pcbs.length>0},
+    {label:'Daily logs by all members',ok:FIXED_MEMBERS.filter(m=>m!==HOD_NAME).every(m=>logs.some(l=>l.member===m))},
+    {label:'No unresolved escalations',ok:esc===0},
+    {label:'Google Sheets connected',ok:!!gsConfig.url},
+  ];
+  document.getElementById('auditList').innerHTML=checks.map(c=>`
+    <div class="audit-item"><input class="audit-chk" type="checkbox" ${c.ok?'checked':''}><span style="color:${c.ok?'var(--dark)':'var(--red)'}">${c.label}</span>
+    <span class="audit-status"><span class="badge ${c.ok?'badge-green':'badge-red'}">${c.ok?'✓ Done':'⚠ Pending'}</span></span></div>`).join('');
+
+  // Escalated
+  const escT=tasks.filter(t=>t.status==='Escalated'||(t.priority==='P1'&&t.status!=='Closed'));
+  document.getElementById('hodEscalated').innerHTML=escT.length
+    ?`<table class="tracker"><thead><tr><th>By</th><th>To</th><th>Site</th><th>Issue</th><th>Pri</th><th>Aging</th></tr></thead><tbody>${escT.map(t=>`<tr class="${agingClass(t.ts,t.status)}"><td>${t.assignedBy||'—'}</td><td>${t.member}</td><td style="font-size:11px">${t.site}</td><td style="font-size:11px">${t.issue}</td><td>${pBadge(t.priority)}</td><td>${agingStr(t.ts,t.status)}</td></tr>`).join('')}</tbody></table>`
+    :'<div class="alert alert-success" style="margin:0">✅ No escalated or P1 open issues.</div>';
+
+  // Productivity summary
+  const scored={};
+  FIXED_MEMBERS.forEach(m=>scored[m]={name:m,pts:0,tasks:0,closed:0,open:0,lastActive:'—'});
+  tasks.forEach(t=>{ if(scored[t.member]){ scored[t.member].tasks++; if(t.status==='Closed') scored[t.member].closed++; else scored[t.member].open++; } });
+  logs.forEach(l=>{ if(scored[l.member]){ scored[l.member].pts+=l.points||0; if(scored[l.member].lastActive==='—'||l.ts>scored[l.member].lastActive) scored[l.member].lastActive=l.ts; } });
+  const rows=Object.values(scored).sort((a,b)=>b.pts-a.pts);
+  document.getElementById('hodProdTable').innerHTML=`
+    <table class="tracker"><thead><tr><th>Member</th><th>Tasks</th><th>Open</th><th>Closed</th><th>Points</th><th>Efficiency</th><th>Last Active</th></tr></thead>
+    <tbody>${rows.map(a=>{ const eff=a.tasks>0?Math.round(a.closed/a.tasks*100):0; return`<tr>
+      <td><div style="display:flex;align-items:center;gap:6px"><div class="avatar" style="width:22px;height:22px;font-size:9px;background:${avatarColor(a.name)}">${initials(a.name)}</div><b>${a.name}</b></div></td>
+      <td>${a.tasks}</td><td class="${a.open>0?'aging-warn-txt':''}">${a.open}</td><td>${a.closed}</td>
+      <td><b style="color:var(--g500)">${a.pts}</b></td>
+      <td><span class="badge ${eff>=80?'badge-green':eff>=50?'badge-amber':'badge-red'}">${eff}%</span></td>
+      <td class="ts">${a.lastActive==='—'?'—':fmt(a.lastActive)}</td>
+    </tr>`;}).join('')}</tbody></table>`;
+
+  // Reassignment audit
+  const ra=tasks.filter(t=>t.reassignChain&&t.reassignChain.length>0);
+  document.getElementById('hodAssignAudit').innerHTML=ra.length
+    ?`<table class="tracker"><thead><tr><th>Issue</th><th>Site</th><th>Originally By</th><th>Chain</th><th>Current</th><th>Status</th><th>Time</th></tr></thead>
+      <tbody>${ra.map(t=>`<tr>
+        <td style="font-size:11px">${t.issue}</td>
+        <td style="font-size:11px">${t.site}</td>
+        <td>${t.assignedBy||'—'}</td>
+        <td style="font-size:10px;color:var(--purple)">${(t.reassignChain||[]).map((c,i)=>`<span title="By: ${c.by||'?'} | Reason: ${c.remark||'—'}">${c.from}→${c.to}</span>`).join(' → ')}</td>
+        <td><b>${t.member}</b></td>
+        <td>${sBadge(t.status)}</td>
+        <td class="ts">${closureTime(t)}</td>
+      </tr>`).join('')}</tbody></table>`
+    :'<div class="empty" style="padding:16px;font-size:12px">No reassignments recorded yet.</div>';
+
+  // All tasks table (with delete)
+  renderHODAllTasks();
+
+  // Offline sites
+  const offS=sites.filter(s=>s.status==='Offline'&&!s.closedAt);
+  document.getElementById('hodOfflineSites').innerHTML=offS.length
+    ?`<table class="tracker"><thead><tr><th>Site</th><th>Offline (h)</th><th>Engineer</th><th>Accessible?</th><th>RCA</th><th>Visit?</th><th>Aging</th><th>Action</th></tr></thead>
+      <tbody>${offS.map(s=>`<tr class="${s.offlineHrs>=72?'aging-crit':s.offlineHrs>=48?'aging-warn':''}">
+        <td style="font-weight:500">${s.site}</td>
+        <td class="${s.offlineHrs>=72?'aging-crit-txt':s.offlineHrs>=48?'aging-warn-txt':''}">${s.offlineHrs}h</td>
+        <td>${s.engineer||'—'}</td>
+        <td>${s.accessible||'<span class="badge badge-gray">Pending</span>'}</td>
+        <td style="font-size:10px">${s.rca||'—'}</td>
+        <td>${s.visitRequired||'—'}</td>
+        <td>${agingStr(s.ts,'Open')}</td>
+        <td><div style="display:flex;gap:3px">
+          <button class="btn btn-blue btn-sm" onclick="openSiteResponse(${s.id})">Update</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteSite(${s.id})">Del</button>
+        </div></td>
+      </tr>`).join('')}</tbody></table>`
+    :'<div class="alert alert-success" style="margin:0">✅ No offline sites.</div>';
+
+  // PCB issues
+  const pi=pcbs.filter(p=>p.status!=='Live');
+  document.getElementById('hodPCBIssues').innerHTML=pi.length
+    ?`<table class="tracker"><thead><tr><th>Site</th><th>PCB</th><th>Status</th><th>Aging</th><th>Person</th><th>Remark</th><th>Action</th></tr></thead>
+      <tbody>${pi.map(p=>`<tr>
+        <td style="font-weight:500">${p.site}</td><td>${p.type}</td><td>${pcbBadge(p.status)}</td>
+        <td>${agingStr(p.ts,'Open')}</td><td>${p.person||'—'}</td>
+        <td style="font-size:10px">${p.remark||'—'}</td>
+        <td><div style="display:flex;gap:3px">
+          <button class="btn btn-amber btn-sm" onclick="openEditPCB(${p.id})">✏ Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deletePCB(${p.id})">Del</button>
+        </div></td>
+      </tr>`).join('')}</tbody></table>`
+    :'<div class="alert alert-success" style="margin:0">✅ All PCB connections live.</div>';
+
+  renderHODActivityLog();
+}
+
+function renderHODAllTasks(){
+  const fs=(document.getElementById('hod_f_status')?.value)||'';
+  const fm=(document.getElementById('hod_f_member')?.value)||'';
+  const fq=((document.getElementById('hod_f_search')?.value)||'').toLowerCase();
+  let filtered=tasks.filter(t=>(!fs||t.status===fs)&&(!fm||t.member===fm||t.assignedBy===fm)&&(!fq||[t.site,t.issue,t.member,t.assignedBy].join(' ').toLowerCase().includes(fq)));
+  document.getElementById('hodAllTasks').innerHTML=filtered.length
+    ?`<table class="tracker"><thead><tr><th>#</th><th>By</th><th>To</th><th>Site</th><th>Issue</th><th>Pri</th><th>Status</th><th>Aging</th><th>SLA</th><th>Reassigned</th><th>RCA</th><th>Actions</th></tr></thead>
+      <tbody>${filtered.map((t,i)=>`<tr class="${agingClass(t.ts,t.status)}">
+        <td class="ts">${i+1}</td>
+        <td><div style="display:flex;align-items:center;gap:4px"><div class="avatar" style="width:18px;height:18px;font-size:8px;background:${avatarColor(t.assignedBy)}">${initials(t.assignedBy)}</div>${t.assignedBy||'—'}</div></td>
+        <td><div style="display:flex;align-items:center;gap:4px"><div class="avatar" style="width:18px;height:18px;font-size:8px;background:${avatarColor(t.member)}">${initials(t.member)}</div><b>${t.member}</b></div></td>
+        <td style="font-size:11px;max-width:80px;white-space:normal">${t.site||'—'}</td>
+        <td style="font-size:11px">${t.issue||'—'}</td>
+        <td>${pBadge(t.priority)}</td>
+        <td>${sBadge(t.status)}</td>
+        <td>${agingStr(t.ts,t.status)}</td>
+        <td>${slaStatus(t.ts,t.priority,t.status)}</td>
+        <td>${(t.reassignChain||[]).length>0?`<span class="badge badge-purple">${(t.reassignChain||[]).length}×</span>`:'-'}</td>
+        <td style="font-size:10px">${t.rca||'—'}</td>
+        <td><div style="display:flex;gap:3px;flex-wrap:wrap">
+          ${t.status!=='Closed'?`<button class="btn btn-primary btn-sm" onclick="openCloseTask(${t.id})">Close</button>`:''}
+          ${t.status!=='Closed'?`<button class="btn btn-purple btn-sm" onclick="openReassign(${t.id})">Reassign</button>`:''}
+          <button class="btn btn-ghost btn-sm" onclick="editTask(${t.id})">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteTask(${t.id})">Del</button>
+        </div></td>
+      </tr>`).join('')}</tbody></table>`
+    :'<div class="empty">No tasks match the filters.</div>';
+}
+
+function renderHODActivityLog(){
+  const fm=(document.getElementById('hod_act_member')?.value)||'';
+  const fd=(document.getElementById('hod_act_date')?.value)||'';
+  const filtered=activityLog.filter(a=>(!fm||a.member===fm)&&(!fd||a.ts?.startsWith(fd)));
+  const aColors={Task:'#2563EB',Site:'#059669',PCB:'#7C3AED',Reassign:'#D97706',Close:'#10B981',Log:'#64748B',HOD:'#DC2626',Password:'#DC2626',Quick:'#0891B2'};
+  function dotColor(action){
+    for(const [k,v] of Object.entries(aColors)) if(action.toLowerCase().includes(k.toLowerCase())) return v;
+    return '#94A3B8';
+  }
+  document.getElementById('hodActivityLog').innerHTML=filtered.length
+    ?filtered.slice(0,200).map(a=>`
+      <div class="activity-item">
+        <div class="activity-dot" style="background:${dotColor(a.action)}"></div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <div class="avatar" style="width:18px;height:18px;font-size:8px;background:${avatarColor(a.member)}">${initials(a.member)}</div>
+            <b style="font-size:12px">${a.member}</b>
+            <span style="font-size:11px;color:var(--mid)">${a.action}</span>
+          </div>
+          <div style="font-size:11px;color:var(--dark);margin-top:3px">${a.detail||'—'}</div>
+        </div>
+        <div class="ts" style="flex-shrink:0">${fmt(a.ts)}</div>
+      </div>`).join('')
+    :'<div class="empty" style="padding:16px;font-size:12px">No activity recorded yet.</div>';
+}
+
+function signOffHOD(){
+  if(!isHOD()){ alert('HOD access required.'); return; }
+  const remarks=document.getElementById('hodRemarks').value;
+  const so={ts:now(),remarks,signedBy:currentUser};
+  const signOffs=STORE.get('signoffs')||[]; signOffs.push(so); STORE.set('signoffs',signOffs);
+  syncToGSNow('HOD_Signoff',[fmt(so.ts),currentUser,remarks]);
+  logActivity('HOD Sign-off',`HOD signed off: ${remarks.slice(0,100)}`);
+  document.getElementById('signOffResult').innerHTML=`<span class="alert alert-success" style="display:inline-flex">✅ Signed off at ${fmt(so.ts)}</span>`;
+  document.getElementById('hodRemarks').value='';
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════════════════════════════
+function refreshDash(){
+  const hr=new Date().getHours();
+  const greet=hr<12?'Good morning':hr<17?'Good afternoon':'Good evening';
+  document.getElementById('dashGreeting').textContent=`${greet}, ${currentUser} 👋`;
+  document.getElementById('dashWelcome').textContent=isHOD()?'HOD Dashboard — Full visibility of all team activity.':'Your personal dashboard — tasks, sites and quick log.';
+
+  const myTasks  =tasks.filter(t=>t.member===currentUser&&t.status!=='Closed');
+  const myAssigned=tasks.filter(t=>t.assignedBy===currentUser&&t.member!==currentUser&&t.status!=='Closed');
+  const myClosed =tasks.filter(t=>t.member===currentUser&&t.status==='Closed');
+  const myP1     =tasks.filter(t=>t.member===currentUser&&t.priority==='P1'&&t.status!=='Closed');
+  const mySites  =sites.filter(s=>s.engineer===currentUser&&!s.closedAt);
+  const myOff    =mySites.filter(s=>s.status==='Offline');
+
+  document.getElementById('dashMetrics').innerHTML=`
+    <div class="metric ${myTasks.length>0?'amber':'green'}"><div class="metric-val">${myTasks.length}</div><div class="metric-lbl">My Open Tasks</div></div>
+    <div class="metric blue"><div class="metric-val">${myAssigned.length}</div><div class="metric-lbl">Tasks I Assigned</div></div>
+    <div class="metric green"><div class="metric-val">${myClosed.length}</div><div class="metric-lbl">My Closed Tasks</div></div>
+    <div class="metric ${myP1.length>0?'red':'green'}"><div class="metric-val">${myP1.length}</div><div class="metric-lbl">My P1 Pending</div></div>
+    <div class="metric ${myOff.length>0?'red':'green'}"><div class="metric-val">${myOff.length}</div><div class="metric-lbl">My Offline Sites</div></div>
+    <div class="metric blue"><div class="metric-val">${mySites.length}</div><div class="metric-lbl">My Sites Assigned</div></div>`;
+
+  document.getElementById('myTasksList').innerHTML=myTasks.length
+    ?myTasks.slice(0,6).map(t=>`<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:600">${t.issue}</div>
+          <div style="font-size:11px;color:var(--mid)">${t.site||'(Own Task)'} · From: ${t.assignedBy||'self'}</div>
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0">${pBadge(t.priority)}${sBadge(t.status)}</div>
+      </div>`).join('')
+    :'<div class="empty" style="padding:20px">No open tasks assigned to you. ✅</div>';
+
+  const onl=mySites.filter(s=>s.status==='Online').length;
+  const off=mySites.filter(s=>s.status==='Offline').length;
+  const del=mySites.filter(s=>s.status==='Delay'||s.status==='Intermittent').length;
+  document.getElementById('siteSnapshot').innerHTML=mySites.length
+    ?[['Online',onl,'green'],['Offline',off,'red'],['Delay / Intermittent',del,'amber']].map(([l,v,c])=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="display:flex;align-items:center;gap:8px"><span class="online-dot dot-${c}"></span><span style="font-size:12px">${l}</span></div>
+          <span style="font-size:14px;font-weight:600;color:var(--${c==='green'?'g500':c==='red'?'red':'amber'})">${v}</span>
+        </div>`).join('')
+    :'<div class="empty" style="padding:20px">No sites currently assigned to you.</div>';
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MIS REPORT
+// ══════════════════════════════════════════════════════════════════════════════
+function openMISForUser(){
+  initMISModal();
+  const notHOD=!isHOD()&&currentUser;
+  if(notHOD){ document.getElementById('mis_member').value=currentUser; document.getElementById('mis_member').disabled=true; }
+  else document.getElementById('mis_member').disabled=false;
+  openModal('misModal');
+}
+function initMISModal(){
+  populateAllSelects();
+  document.getElementById('mis_date').value=new Date().toISOString().split('T')[0];
+  if(!isHOD()&&currentUser) document.getElementById('mis_member').value=currentUser;
+}
+function generateMIS(){
+  const member=document.getElementById('mis_member').value;
+  const effective=isHOD()?member:(currentUser||member);
+  const date=document.getElementById('mis_date').value;
+  const type=document.getElementById('mis_type').value;
+  const d=new Date();
+  const dateStr=date||d.toISOString().split('T')[0];
+  const lines=[]; const sep='═'.repeat(62); const thin='─'.repeat(62);
+  lines.push('ECOLYSER ENVIRONMENTAL SOLUTIONS'); lines.push('DAILY MIS REPORT'); lines.push(sep);
+  lines.push('Date: '+new Date(dateStr).toLocaleDateString('en-IN',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}));
+  if(effective) lines.push('Team Member: '+effective);
+  lines.push('Report Type: '+type.toUpperCase()); lines.push('Generated: '+d.toLocaleString('en-IN')); lines.push(sep);
+  const ft=tasks.filter(t=>(!effective||t.member===effective||t.assignedBy===effective)&&(!date||t.ts?.startsWith(date)));
+  const fl=logs.filter(l=>(!effective||l.member===effective)&&(!date||l.ts?.startsWith(date)));
+  const fs_=sites.filter(s=>(!effective||s.engineer===effective||s.addedBy===effective)&&(!date||s.ts?.startsWith(date)));
+  const fp=pcbs.filter(p=>(!effective||p.person===effective||p.addedBy===effective)&&(!date||p.ts?.startsWith(date)));
+  if(['daily','tasks','full'].includes(type)){
+    lines.push(''); lines.push('TASK SUMMARY'); lines.push(thin);
+    lines.push(`Total: ${ft.length} | Open: ${ft.filter(t=>t.status==='Open').length} | In Progress: ${ft.filter(t=>t.status==='In Progress').length} | Closed: ${ft.filter(t=>t.status==='Closed').length}`);
+    lines.push(''); lines.push('OPEN / IN PROGRESS:');
+    ft.filter(t=>t.status!=='Closed').forEach(t=>{ const age=((Date.now()-new Date(t.ts))/3600000).toFixed(1); lines.push(`  [${t.priority}] ${t.assignedBy||'?'}→${t.member} | ${t.site} | ${t.issue} | Age: ${age}h | RCA: ${t.rca||'N/A'} | ${t.remark||''}`); });
+    lines.push(''); lines.push('CLOSED:');
+    ft.filter(t=>t.status==='Closed').forEach(t=>lines.push(`  [CLOSED] ${t.member} | ${t.site} | ${t.issue} | Time: ${closureTime(t)}`));
+    lines.push(''); lines.push('REASSIGNMENT TRAIL:');
+    const ra=ft.filter(t=>t.reassignChain&&t.reassignChain.length);
+    if(ra.length) ra.forEach(t=>lines.push(`  ${t.issue} | ${(t.reassignChain||[]).map(c=>`${c.from}→${c.to}`).join(' → ')} | Final: ${t.member}`));
+    else lines.push('  No reassignments.');
+  }
+  if(['daily','sites','full'].includes(type)){
+    lines.push(''); lines.push(sep); lines.push('SITE MONITORING'); lines.push(thin);
+    fs_.filter(s=>s.status==='Offline').forEach(s=>lines.push(`  [OFFLINE] ${s.site} | ${s.offlineHrs}h | Eng: ${s.engineer||'-'} | Accessible: ${s.accessible||'?'} | RCA: ${s.rca||'-'}`));
+    if(!fs_.filter(s=>s.status==='Offline').length) lines.push('  No offline sites.');
+  }
+  if(['daily','pcb','full'].includes(type)){
+    lines.push(''); lines.push(sep); lines.push('PCB CONNECTIVITY'); lines.push(thin);
+    fp.filter(p=>p.status!=='Live').forEach(p=>lines.push(`  [ISSUE] ${p.site} | ${p.type} | ${p.status} | ${p.person||'-'} | ${p.remark||''}`));
+    if(!fp.filter(p=>p.status!=='Live').length) lines.push('  All PCB connections live.');
+  }
+  if(['daily','full'].includes(type)){
+    lines.push(''); lines.push(sep); lines.push('WORK LOGS'); lines.push(thin);
+    if(fl.length) fl.forEach(l=>lines.push(`  ${fmt(l.ts)} | ${l.member} | ${l.site} | ${l.issue} | ${l.status} | Pts: ${l.points} | ${l.remark||''}`));
+    else lines.push('  No logs for this filter.');
+  }
+  lines.push(''); lines.push(sep); lines.push('End of MIS Report — Ecolyser Environmental Solutions');
+
+  try{
+    const{jsPDF}=window.jspdf; const doc=new jsPDF({unit:'mm',format:'a4'});
+    const PW=210,ML=14,MR=14,MB=14,usableW=210-ML-MR; let y=14;
+    doc.setFillColor(6,78,59); doc.rect(0,0,PW,22,'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(13); doc.setFont('helvetica','bold');
+    doc.text('ECOLYSER ENVIRONMENTAL SOLUTIONS',ML,10);
+    doc.setFontSize(9); doc.setFont('helvetica','normal');
+    doc.text('Daily MIS Report · Confidential',ML,17); doc.text('Generated: '+d.toLocaleString('en-IN'),PW-MR,17,{align:'right'});
+    y=30; doc.setTextColor(50,50,50); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text('Report Date: '+new Date(dateStr).toLocaleDateString('en-IN',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}),ML,y);
+    if(effective) doc.text('Member: '+effective,PW/2,y,{align:'center'});
+    doc.text('Type: '+type.toUpperCase(),PW-MR,y,{align:'right'}); y+=6;
+    doc.setDrawColor(200,200,200); doc.setLineWidth(0.3); doc.line(ML,y,PW-MR,y); y+=5;
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(30,30,30);
+    const LH=4.5; const pageBottom=297-MB-8;
+    function nextPage(){ doc.addPage(); y=16; }
+    lines.forEach(line=>{
+      if(y>pageBottom) nextPage();
+      if(line.startsWith('═')||line.startsWith('─')){ doc.setDrawColor(220,220,220); doc.setLineWidth(0.2); doc.line(ML,y+1,PW-MR,y+1); y+=LH-1; return; }
+      const isH=line===line.toUpperCase()&&line.trim().length>4&&!line.startsWith(' ')&&!/[0-9|:,]/.test(line.slice(0,2));
+      if(isH){ y+=2; doc.setFillColor(236,253,245); doc.rect(ML,y-3,usableW,6,'F'); doc.setTextColor(4,120,87); doc.setFont('helvetica','bold'); doc.text(line,ML+2,y+1); doc.setTextColor(30,30,30); doc.setFont('helvetica','normal'); y+=LH+1; return; }
+      const wrapped=doc.splitTextToSize(line,usableW);
+      wrapped.forEach(wl=>{ if(y>pageBottom) nextPage(); if(wl.includes('[P1]')) doc.setTextColor(220,38,38); else if(wl.includes('[OFFLINE]')) doc.setTextColor(180,20,20); else if(wl.includes('[CLOSED]')) doc.setTextColor(5,150,105); else doc.setTextColor(30,30,30); doc.text(wl,ML,y); y+=LH; });
+    });
+    const total=doc.getNumberOfPages();
+    for(let pg=1;pg<=total;pg++){ doc.setPage(pg); doc.setFontSize(7); doc.setTextColor(150,150,150); doc.text('Ecolyser Environmental Solutions — Internal MIS',ML,297-6); doc.text('Page '+pg+' of '+total,PW-MR,297-6,{align:'right'}); }
+    doc.save(`Ecolyser_MIS_${effective||'Team'}_${dateStr}.pdf`);
+    logActivity('MIS Downloaded',`${currentUser} downloaded ${type} MIS for ${effective||'Team'} on ${dateStr}`);
+  } catch(err){
+    const blob=new Blob([lines.join('\n')],{type:'text/plain'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`Ecolyser_MIS_${effective||'Team'}_${dateStr}.txt`; a.click();
+  }
+  closeModal('misModal');
+}
+function exportHODReport(){ initMISModal(); document.getElementById('mis_member').value=''; document.getElementById('mis_member').disabled=false; document.getElementById('mis_type').value='full'; generateMIS(); }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// LISTS / CONFIG
+// ══════════════════════════════════════════════════════════════════════════════
+function renderLists(){
+  ['sites','issues','rcas'].forEach(key=>{
+    const el=document.getElementById('list-'+key); if(!el) return;
+    el.innerHTML=lists[key].map((item,i)=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-bottom:1px solid var(--border);font-size:12px">
+        <span>${item}</span>
+        <button class="btn btn-danger btn-sm" style="padding:2px 7px;font-size:10px" onclick="removeListItem('${key}',${i})">×</button>
+      </div>`).join('');
+  });
+  const mel=document.getElementById('list-members'); if(!mel) return;
+  mel.innerHTML=FIXED_MEMBERS.map((m,i)=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-bottom:1px solid var(--border);font-size:12px">
+      <div style="display:flex;align-items:center;gap:6px"><div class="avatar" style="width:18px;height:18px;font-size:8px;background:${avatarColor(m)}">${initials(m)}</div>${m}${m===HOD_NAME?' <span class="badge badge-green">HOD</span>':''}</div>
+    </div>`).join('');
+}
+function addListItem(key){
+  const input=document.getElementById('new-'+key); const val=input.value.trim(); if(!val) return;
+  if(!lists[key]) lists[key]=[];
+  if(!lists[key].includes(val)){ lists[key].push(val); STORE.set('lists',lists); populateAllSelects(); renderLists(); logActivity('List Updated',`Added "${val}" to ${key}`); }
+  input.value='';
+}
+function removeListItem(key,i){
+  lists[key].splice(i,1); STORE.set('lists',lists); populateAllSelects(); renderLists();
+  logActivity('List Updated',`Removed item from ${key}`);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// EXCEL IMPORT
+// ══════════════════════════════════════════════════════════════════════════════
+function importSitesFromExcel(input){
+  const file=input.files[0]; if(!file) return;
+  const res=document.getElementById('excelImportResult');
+  res.innerHTML='<span style="color:var(--amber)">⏳ Reading file…</span>';
+  const ext=file.name.split('.').pop().toLowerCase();
+  function processSites(rows){
+    let imp=0,skip=0;
+    rows.forEach((val,idx)=>{
+      const v=String(val||'').replace(/"/g,'').trim(); if(!v) return;
+      if(idx===0&&(v.toLowerCase().includes('site')||v.toLowerCase().includes('name'))) return;
+      if(!lists.sites.includes(v)){ lists.sites.push(v); imp++; } else skip++;
+    });
+    STORE.set('lists',lists); populateAllSelects(); renderLists();
+    res.innerHTML=`<span style="color:var(--g500)">✅ Imported ${imp} sites. ${skip} already existed.</span>`;
+    logActivity('Sites Imported',`${currentUser} imported ${imp} sites from ${file.name}`);
+  }
+  if(ext==='csv'||ext==='txt'){
+    const r=new FileReader(); r.onload=e=>processSites(e.target.result.split('\n').map(l=>l.split(',')[0])); r.readAsText(file);
+  } else if(ext==='xlsx'||ext==='xls'){
+    const r=new FileReader(); r.onload=e=>{
+      try{ const wb=XLSX.read(e.target.result,{type:'array'}); const ws=wb.Sheets[wb.SheetNames[0]]; const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''}); processSites(rows.map(r=>r[0])); }
+      catch(err){ res.innerHTML=`<span style="color:var(--red)">❌ ${err.message}</span>`; }
+    }; r.readAsArrayBuffer(file);
+  } else { res.innerHTML='<span style="color:var(--red)">❌ Unsupported format. Use .xlsx or .csv</span>'; }
+  input.value='';
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// GOOGLE SHEETS CONFIG
+// ══════════════════════════════════════════════════════════════════════════════
+function saveGSConfig(){
+  gsConfig={ url:document.getElementById('gsUrl').value.trim(), sheet:document.getElementById('gsSheet').value.trim() };
+  STORE.set('gsConfig',gsConfig);
+  document.getElementById('gsSheetLink').textContent=gsConfig.url?`☁ Connected: ${gsConfig.sheet} — Click "Sync All Now" to push data`:'Configure Google Sheets to auto-sync data';
+  document.getElementById('syncAllBtnTop').style.display=(isHOD()&&gsConfig.url)?'':'none';
+  closeModal('gsModal');
+  if(gsConfig.url){ showInAppToast('✅ Sheets Connected','Click "↑ Sync All" in topbar to push existing data.','☁'); logActivity('Sheets Connected',`HOD configured Google Sheets: ${gsConfig.sheet}`); }
+}
+function testGS(){
+  const url=document.getElementById('gsUrl').value;
+  if(!url){ document.getElementById('gsTestResult').innerHTML='<span style="color:var(--red)">Enter URL first.</span>'; return; }
+  document.getElementById('gsTestResult').innerHTML='<span style="color:var(--amber)">Testing…</span>';
+  fetch(url,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'append',sheet:'Test',row:[new Date().toISOString(),'Ecolyser v7 Test','Connection OK']})})
+    .then(()=>document.getElementById('gsTestResult').innerHTML='<span style="color:var(--g500)">✅ Request sent — check your Sheet for a "Test" tab with a new row.</span>')
+    .catch(()=>document.getElementById('gsTestResult').innerHTML='<span style="color:var(--amber)">ℹ Request attempted. CORS blocks response — check your Sheet directly.</span>');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// DATA MANAGEMENT
+// ══════════════════════════════════════════════════════════════════════════════
+function exportJSON(){
+  const data={tasks,sites,pcbs,logs,activityLog,lists,exportedAt:new Date().toISOString(),exportedBy:currentUser};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='EcolyserData_v7.json'; a.click();
+  logActivity('Data Exported',`${currentUser} exported all data as JSON`);
+}
+function clearAllData(){
+  if(!isHOD()){ alert('Only HOD can reset data.'); return; }
+  if(!confirm('RESET ALL DATA? This permanently deletes all tasks, sites, PCB entries, logs and activities. This cannot be undone!')) return;
+  tasks=[]; sites=[]; pcbs=[]; logs=[]; activityLog=[]; notifications=[];
+  ['tasks','sites','pcbs','logs','activityLog','notifs'].forEach(k=>saveData(k,[]));
+  refreshDash(); renderTasks(); renderSites(); renderPCB(); updateNotifBadge();
+  showInAppToast('⚠ Data Cleared','All data has been reset.','⚠');
+  logActivity('Data Reset','HOD cleared all data');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CLOCK & AUTO-REFRESH
+// ══════════════════════════════════════════════════════════════════════════════
+function updateClock(){
+  document.getElementById('topDate').textContent=
+    new Date().toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'})+
+    ' · '+new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+}
+updateClock(); setInterval(updateClock,30000);
+
+setInterval(()=>{
+  if(document.getElementById('panel-tasks').classList.contains('active')) renderTasks();
+  if(document.getElementById('panel-hod').classList.contains('active')) refreshHOD();
+  if(document.getElementById('panel-sites').classList.contains('active')){ renderSites(); renderSiteMetrics(); }
+  if(document.getElementById('panel-pcb').classList.contains('active')) renderPCB();
+  if(document.getElementById('panel-productivity').classList.contains('active')) renderProd();
+  if(document.getElementById('panel-dashboard').classList.contains('active')) refreshDash();
+},30000);
+
+// ══════════════════════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════════════════════
+(function init(){
+  populateLoginSelect();
+  const session=STORE.get('session');
+  if(session&&session.name&&FIXED_MEMBERS.includes(session.name)){
+    currentUser=session.name;
+    if(currentUser===HOD_NAME) hodUnlocked=true;
+    document.getElementById('loginOverlay').style.display='none';
+    onAfterLogin();
+  }
+  document.getElementById('gsUrl').value=gsConfig.url||'';
+  document.getElementById('gsSheet').value=gsConfig.sheet||'EcolyserData';
+  if(gsConfig.url) document.getElementById('gsSheetLink').textContent=`☁ Connected: ${gsConfig.sheet} — Click "↑ Sync All" to push data`;
+})();
+</script>
+</body>
+</html>
