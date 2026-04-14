@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ecolyser — Daily Task Tracker v7</title>
+<title>Ecolyser — Daily Task Tracker v8</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -843,6 +843,43 @@ function doGet(e) {
             <button class="btn btn-danger btn-sm" onclick="clearAllData()">⚠ Reset All Data</button>
           </div>
         </div>
+
+        <!-- ☁ Firebase Cloud Sync -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">☁ Cloud Sync — Share Data Across All Devices</div>
+              <div class="card-sub">Fixes the issue where tasks don't show on other PCs</div>
+            </div>
+          </div>
+          <div class="alert alert-info" style="margin-bottom:14px">
+            📱 <strong>How it works:</strong> Enter your free Firebase Realtime Database URL below. All team members will automatically share the same tasks, sites, and logs — on any device, any browser.
+          </div>
+          <div class="form-grid" style="margin-bottom:10px">
+            <div class="field" style="grid-column:1/-1">
+              <label>Firebase Database URL</label>
+              <input type="text" id="fbUrlInput" placeholder="https://your-project-default-rtdb.firebaseio.com">
+            </div>
+          </div>
+          <div class="btn-row" style="margin-bottom:10px">
+            <button class="btn btn-primary" onclick="saveFBConfig()">💾 Save &amp; Connect</button>
+            <button class="btn btn-blue btn-sm" onclick="pushAllToFirebase()">↑ Push All Existing Data</button>
+            <button class="btn btn-ghost btn-sm" onclick="syncFromFirebase(false)">↓ Pull Latest Now</button>
+          </div>
+          <div id="fbResult" style="font-size:11px;margin-top:4px"></div>
+          <details style="margin-top:14px">
+            <summary style="font-size:12px;font-weight:600;color:var(--mid);cursor:pointer">📖 How to get a free Firebase URL (3 steps)</summary>
+            <div class="code-block" style="margin-top:8px;font-size:11px;line-height:1.8">
+1. Go to <strong>console.firebase.google.com</strong> → Create a project (free)
+2. Click "Realtime Database" → Create Database → Start in TEST mode
+   (Test mode allows read/write — fine for a private team tool)
+3. Copy the URL shown (looks like: https://your-project-default-rtdb.firebaseio.com)
+   Paste it above → Save &amp; Connect → Push All Existing Data
+
+✅ Done! Every device that opens this file will now share the same data.
+⚠  Auto-syncs every 30 seconds. Data is also saved locally as backup.</div>
+          </details>
+        </div>
       </div>
 
     </div>
@@ -853,7 +890,7 @@ function doGet(e) {
 // ══════════════════════════════════════════════════════════════════════════════
 // CONSTANTS
 // ══════════════════════════════════════════════════════════════════════════════
-const APP_VERSION   = 'v7.0-20250411';
+const APP_VERSION   = 'v8.0-CloudSync';
 const HOD_NAME      = 'Pooja';
 const FIXED_MEMBERS = ['Pooja','Kyle','Sameer','Pratiksha','Sailee'];
 const DEFAULT_PASSWORDS = {
@@ -874,11 +911,20 @@ const DEFAULT_RCAS = [
 ];
 
 // ══════════════════════════════════════════════════════════════════════════════
-// STORE — reliable localStorage wrapper
+// STORE — localStorage wrapper + Firebase cloud sync
 // ══════════════════════════════════════════════════════════════════════════════
+const FB_SYNC_KEYS = ['tasks','sites','pcbs','logs','activityLog','notifs','lists','hodPwd','userPwds','gsConfig'];
+let _fbUrl = ''; // populated after fbConfig loads
+
 const STORE = {
   get(k)  { try { const v=localStorage.getItem('eco7_'+k); return v?JSON.parse(v):null; } catch(e){ return null; } },
-  set(k,v){ try { localStorage.setItem('eco7_'+k, JSON.stringify(v)); } catch(e){} },
+  set(k,v){
+    try { localStorage.setItem('eco7_'+k, JSON.stringify(v)); } catch(e){}
+    // Mirror to Firebase for shared data keys
+    if(_fbUrl && FB_SYNC_KEYS.includes(k)){
+      fetch(`${_fbUrl}/eco7/${k}.json`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(v)}).catch(()=>{});
+    }
+  },
   del(k)  { try { localStorage.removeItem('eco7_'+k); } catch(e){} }
 };
 
@@ -897,6 +943,10 @@ let userPasswords = STORE.get('userPwds')      || {};
 FIXED_MEMBERS.forEach(m=>{ if(!userPasswords[m]) userPasswords[m]=DEFAULT_PASSWORDS[m]; });
 STORE.set('userPwds', userPasswords);
 
+// Firebase config — load and activate
+let fbConfig = STORE.get('fbConfig') || { url: '' };
+_fbUrl = fbConfig.url || '';
+
 let currentUser  = '';
 let hodUnlocked  = false;
 let activeTaskTab= 'all';
@@ -914,6 +964,62 @@ let lists = (function(){
 STORE.set('lists', lists);
 
 function saveData(key, arr){ STORE.set(key, arr); }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FIREBASE CLOUD SYNC
+// ══════════════════════════════════════════════════════════════════════════════
+function saveFBConfig(){
+  const url=(document.getElementById('fbUrlInput').value||'').trim().replace(/\/+$/,'');
+  const res=document.getElementById('fbResult');
+  fbConfig={url};
+  _fbUrl=url;
+  STORE.set('fbConfig',fbConfig);
+  if(!url){ res.innerHTML='<span style="color:var(--amber)">⚠ Firebase URL cleared. Using local storage only.</span>'; return; }
+  res.innerHTML='<span style="color:var(--amber)">⏳ Testing connection…</span>';
+  fetch(`${url}/eco7/ping.json`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({ts:new Date().toISOString()})})
+    .then(r=>{ if(r.ok){ res.innerHTML='<span style="color:var(--g500)">✅ Connected! Push all existing data now to share it.</span>'; } else { res.innerHTML='<span style="color:var(--red)">❌ Connection failed. Check URL and database rules.</span>'; }})
+    .catch(()=>res.innerHTML='<span style="color:var(--red)">❌ Could not reach Firebase. Check URL.</span>');
+  logActivity('Firebase Config Saved',`${currentUser} connected Firebase: ${url}`);
+}
+
+async function syncFromFirebase(silent){
+  if(!_fbUrl) return;
+  if(!silent) showInAppToast('☁ Syncing','Loading latest data from cloud…','☁');
+  try{
+    const r=await fetch(`${_fbUrl}/eco7.json`);
+    if(!r.ok) return;
+    const d=await r.json();
+    if(!d) return;
+    let changed=false;
+    if(d.tasks      ){ tasks=d.tasks;             STORE.get&&localStorage.setItem('eco7_tasks',      JSON.stringify(tasks));       changed=true; }
+    if(d.sites      ){ sites=d.sites;             localStorage.setItem('eco7_sites',      JSON.stringify(sites));       changed=true; }
+    if(d.pcbs       ){ pcbs=d.pcbs;               localStorage.setItem('eco7_pcbs',       JSON.stringify(pcbs));        changed=true; }
+    if(d.logs       ){ logs=d.logs;               localStorage.setItem('eco7_logs',       JSON.stringify(logs));        changed=true; }
+    if(d.activityLog){ activityLog=d.activityLog; localStorage.setItem('eco7_activityLog',JSON.stringify(activityLog)); changed=true; }
+    if(d.notifs     ){ notifications=d.notifs;    localStorage.setItem('eco7_notifs',     JSON.stringify(notifications));changed=true; }
+    if(d.lists      ){ lists={...lists,...d.lists};localStorage.setItem('eco7_lists',     JSON.stringify(lists));       changed=true; }
+    if(d.hodPwd     ){ hodPassword=d.hodPwd;      localStorage.setItem('eco7_hodPwd',     JSON.stringify(hodPassword)); }
+    if(d.userPwds   ){ userPasswords={...userPasswords,...d.userPwds}; localStorage.setItem('eco7_userPwds',JSON.stringify(userPasswords)); }
+    if(d.gsConfig   ){ gsConfig=d.gsConfig;       localStorage.setItem('eco7_gsConfig',   JSON.stringify(gsConfig)); }
+    if(changed && currentUser){
+      populateAllSelects(); renderLists();
+      refreshDash(); renderTaskMetrics(); renderSiteMetrics(); renderPCB(); updateNotifBadge();
+      if(!silent) showInAppToast('✅ Cloud Sync Done','All data updated from Firebase.','☁');
+    }
+  } catch(e){ if(!silent) showInAppToast('⚠ Sync Error','Could not reach Firebase.','⚠'); }
+}
+
+function pushAllToFirebase(){
+  if(!_fbUrl){ showInAppToast('⚠ Not Configured','Enter a Firebase URL first.','⚠'); return; }
+  const res=document.getElementById('fbResult');
+  if(res) res.innerHTML='<span style="color:var(--amber)">⏳ Pushing all data…</span>';
+  const payload={tasks,sites,pcbs,logs,activityLog,notifs:notifications,lists,hodPwd:hodPassword,userPwds:userPasswords,gsConfig};
+  fetch(`${_fbUrl}/eco7.json`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+    .then(r=>{ if(r.ok){ if(res) res.innerHTML='<span style="color:var(--g500)">✅ All data pushed to Firebase!</span>'; showInAppToast('✅ Push Complete','All data is now on Firebase and shared with the team.','☁'); }
+      else { if(res) res.innerHTML='<span style="color:var(--red)">❌ Push failed. Check Firebase rules.</span>'; }})
+    .catch(()=>{ if(res) res.innerHTML='<span style="color:var(--red)">❌ Could not reach Firebase.</span>'; });
+  logActivity('Firebase Push',`${currentUser} pushed all data to Firebase`);
+}
 
 // ══════════════════════════════════════════════════════════════════════════════
 // GOOGLE SHEETS SYNC
@@ -2422,6 +2528,7 @@ setInterval(()=>{
   if(document.getElementById('panel-pcb').classList.contains('active')) renderPCB();
   if(document.getElementById('panel-productivity').classList.contains('active')) renderProd();
   if(document.getElementById('panel-dashboard').classList.contains('active')) refreshDash();
+  syncFromFirebase(true); // silently pull latest data from cloud every 30s
 },30000);
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -2439,6 +2546,10 @@ setInterval(()=>{
   document.getElementById('gsUrl').value=gsConfig.url||'';
   document.getElementById('gsSheet').value=gsConfig.sheet||'EcolyserData';
   if(gsConfig.url) document.getElementById('gsSheetLink').textContent=`☁ Connected: ${gsConfig.sheet} — Click "↑ Sync All" to push data`;
+  document.getElementById('fbUrlInput').value=fbConfig.url||'';
+  if(fbConfig.url) document.getElementById('fbResult').innerHTML='<span style="color:var(--g500)">☁ Firebase connected — syncing on load…</span>';
+  // Pull latest data from Firebase so all devices stay in sync
+  syncFromFirebase(false);
 })();
 </script>
 </body>
